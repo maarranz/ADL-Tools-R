@@ -19,8 +19,6 @@ URL: https://github.com/maarranz/ADL-Tools-R
 BugReports: https://github.com/maarranz/ADL-Tools-R/issues
 Encoding: UTF-8
 Depends: R (>= 4.1)
-Imports:
-    stats
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
