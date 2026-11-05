@@ -1,0 +1,28 @@
+Package: adltools
+Type: Package
+Title: Teaching-Oriented Tools for Autoregressive Distributed Lag Models
+Version: 0.0.0.9000
+Authors@R: person("Miguel A.", "Arranz", email = "maarranz@eco.uc3m.es",
+    role = c("aut", "cre"),
+    comment = c(ORCID = "0000-0002-5951-2284",
+                affiliation = "Universidad Carlos III de Madrid"))
+Description: Formulation, estimation and inference for autoregressive
+    distributed lag (ADL) models, developed for Applied Time Series
+    Econometrics (ATSE) at Universidad Carlos III de Madrid. Models can be
+    written with 'dynlm'-style formulas or with lag orders, and the package
+    brings together tests that are otherwise scattered across packages,
+    starting with the direct (Sargent) Granger non-causality procedure with
+    instantaneous causality and the eight-way classification of causal
+    relations.
+License: MIT + file LICENSE
+URL: https://github.com/maarranz/ADL-Tools-R
+BugReports: https://github.com/maarranz/ADL-Tools-R/issues
+Encoding: UTF-8
+Depends: R (>= 4.1)
+Imports:
+    stats
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.1
