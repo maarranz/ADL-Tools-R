@@ -263,15 +263,20 @@ For each regressor x_i:
 
 ## 12. Roadmap
 
-- **v0.1** — specification and estimation (`adl()`, lag sets, several
-  regressors, dynlm parsing, base and tidy inputs); inference
-  (`adl_coefficients()`, `adl_joint_test()`, `adl_long_run()`); Granger
-  (`granger_test()`, `granger_test_general()`).
+- **v0.1.0** — specification and estimation (`adl()` from `order`/`start`,
+  explicit `lags` or its own dynlm-style formulas; several regressors;
+  unlagged dummies; base and tidy inputs); inference (`adl_coefficients()`,
+  `adl_joint_test()`, `adl_long_run()`); Granger (`granger_test()`,
+  `granger_test_general()` with user-supplied orders only); `tidy()`/
+  `glance()`; one vignette on Granger causality.
+- **v0.1.x** — accept existing `dynlm` fits.
 - **v0.2** — diagnostics (BG, ARCH, RESET, JB), Chow breakpoint,
   `chow_forecast_test()` (static and dynamic), `comfac_test()` (LR, and Wald
   for the ADL(1,1)), outlier detection.
 - **v0.3** — exogeneity (`wu_hausman_test()`, `weak_exogeneity_test()` with
-  strong exogeneity, `super_exogeneity_test()`), `adl_gets()` tier 1.
+  strong exogeneity, `super_exogeneity_test()`), `adl_gets()` tier 1, and
+  automatic lag selection in `granger_test_general()` (same engine; the
+  argument exists from v0.1.0 and stops with "not yet implemented").
 - **Later** — Hansen (1992) per coefficient; J-test with the four-outcome
   reading; dynamic multipliers, mean and median lag, inverse roots; ECM view;
   dynamic forecasts with ψ-weight variance and fan charts; Sargan's general
