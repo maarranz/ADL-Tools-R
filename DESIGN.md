@@ -71,9 +71,11 @@ corresponding polynomial, so multipliers and forecasts work unchanged.
 ### 3.3 Three ways to specify a model, one representation
 
 1. **Lag orders** (convenience):
-   `adl(y ~ x1 + x2, data, order = c(p, q1, q2), start = c(x1 = 0, x2 = 1))`.
-   `order` gives maximum lags; `start` the first lag of each regressor
-   (default 0; `start = 1` removes the contemporaneous term).
+   `adl(y ~ x1 + x2, data, order = c(p, q1, q2), first_lag = c(x1 = 0, x2 = 1))`.
+   `order` gives maximum lags; `first_lag` the first lag of each regressor
+   (default 0; `first_lag = 1` removes the contemporaneous term).
+   `start` and `end` keep their usual time-series meaning (estimation
+   sample), as in `ts()`, `window()` and `dynlm()`.
 2. **Explicit lag sets**: `adl(y ~ x1 + x2, data, lags = list(...))`.
 3. **dynlm-style formulas**: `y ~ L(y, 1:2) + L(x1, 0:2) + L(x2, 1:3)`, and
    existing `dynlm` fits.
@@ -109,7 +111,7 @@ readable: `y_lag1`, `x1`, `x1_lag1`.
 
 ### 3.7 Contemporaneous terms
 
-Models with and without x_t must be equally easy to write (`start`, lag sets,
+Models with and without x_t must be equally easy to write (`first_lag`, lag sets,
 formulas). Search procedures take a per-regressor rule
 `contemporaneous = c("both", "include", "exclude")`:
 
@@ -210,7 +212,7 @@ For each regressor x_i:
   by impulse/step dummies (from the outlier/break tools), then those dummies
   tested in the conditional model (Engle and Hendry, 1993).
 
-## 9. Outliers (v0.2)
+## 9. Outliers (v0.2.x)
 
 - Types: AO, LS, TC, IO, and outliers in x. Documentation presents AO and LS
   first; IO and outliers in x as advanced.
@@ -261,18 +263,72 @@ For each regressor x_i:
 - **Tests**: every function checked against a known result (EViews output,
   lmtest/strucchange, or a simulated DGP).
 
-## 12. Roadmap
+## 12. Data handling
 
-- **v0.1.0** — specification and estimation (`adl()` from `order`/`start`,
+- **Missing values**: leading and trailing NAs are trimmed with a message;
+  internal NAs stop with an error (dropping them would break the lag
+  structure).
+- **Time index for data frames/tibbles**: a time column given by `time =`, or
+  detected when exactly one Date/yearmon/yearqtr column exists; otherwise row
+  order, with a message.
+- **Sample**: `start`/`end` select the estimation sample; the first
+  max(lags) observations of that sample are used as initial values, so all
+  models built from the same data and lag bound share one common sample.
+
+## 13. Implementation plan
+
+**Dependencies.** Imports: stats, zoo (index alignment, lagging), sandwich
+(HAC), lmtest (`bgtest()`, `resettest()`), generics (`tidy`, `glance`).
+Suggests: testthat, tibble, tsibble, xts, dynlm and ARDL (cross-checks in
+tests), knitr, rmarkdown.
+
+**v0.1.0 files**
+
+| File | Contents |
+|:--|:--|
+| `R/input.R` | `as_adl_data()` (internal): any input type to a zoo matrix with regular index; NA handling; names |
+| `R/lags.R` | `order`/`first_lag`, `lags` or formula to the lag-set list; `build_design()` (design matrix, readable names, common sample) |
+| `R/formula.R` | Parser for `y ~ x1 + x2 \| D` and `y ~ L(y, 1:2) + L(x, 0:2) \| D`; equivalent dynlm formula for printing |
+| `R/adl.R` | `adl()`, `print`, `summary`; object stores lag sets, sample, index, data |
+| `R/vcov.R` | `adl_vcov(fit, cov_type, maxlags)`, identical to forecastingtools |
+| `R/test-class.R` | `adltools_test` constructor and print method |
+| `R/inference.R` | `adl_coefficients()`, `adl_joint_test()`, `adl_long_run()` |
+| `R/granger.R` | engine, `granger_test()`, `granger_test_general()` (`select =` stops with "not yet implemented"), classification |
+| `R/tidy.R` | `tidy()`/`glance()` methods |
+| `vignettes/granger.Rmd` | Granger causality following ADL3 |
+| `data/` | small simulated ADL(1,1) dataset with known parameters |
+
+Order of work (one commit each): input and lags → `adl()` → vcov and test
+class → inference → Granger → tidy/glance → vignette and data → release
+(tag `v0.1.0`).
+
+**v0.2.0 files**
+
+| File | Contents |
+|:--|:--|
+| `R/diagnostics.R` | `bg_test()`, `reset_test()` (lmtest underneath); `arch_test()`, `jb_test()` written directly (no FinTS/tseries); `adl_diagnostics()` in ADL3's order |
+| `R/chow.R` | `chow_break_test()` (dummy interactions, HAC possible); `chow_forecast_test()` static (dummy-variable regression = exact Ω̂ form) and dynamic (Ω̂ from ψ-weights of 1/C(L), general p) |
+| `R/comfac.R` | `comfac_test(fit, r, method)`: restricted model parametrized by (c, φ, δ_i, ω), mapped to unrestricted coefficients by polynomial multiplication, RSS minimized with `optim()` on the same design matrix (same sample by construction); start values from the roots of Ĉ(L) |
+
+Outlier detection moves to **v0.2.x** (depends on the `gets::isat()`
+decision).
+
+**Testing.** Development tests run in a Linux R installation in the
+assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
+
+## 14. Roadmap
+
+- **v0.1.0** — specification and estimation (`adl()` from `order`/`first_lag`,
   explicit `lags` or its own dynlm-style formulas; several regressors;
   unlagged dummies; base and tidy inputs); inference (`adl_coefficients()`,
   `adl_joint_test()`, `adl_long_run()`); Granger (`granger_test()`,
   `granger_test_general()` with user-supplied orders only); `tidy()`/
   `glance()`; one vignette on Granger causality.
 - **v0.1.x** — accept existing `dynlm` fits.
-- **v0.2** — diagnostics (BG, ARCH, RESET, JB), Chow breakpoint,
+- **v0.2.0** — diagnostics (BG, ARCH, RESET, JB), Chow breakpoint,
   `chow_forecast_test()` (static and dynamic), `comfac_test()` (LR, and Wald
-  for the ADL(1,1)), outlier detection.
+  for the ADL(1,1)).
+- **v0.2.x** — outlier detection.
 - **v0.3** — exogeneity (`wu_hausman_test()`, `weak_exogeneity_test()` with
   strong exogeneity, `super_exogeneity_test()`), `adl_gets()` tier 1, and
   automatic lag selection in `granger_test_general()` (same engine; the
@@ -284,7 +340,7 @@ For each regressor x_i:
 - **Elsewhere** — forecastingtools: `static_forecast()` for ADL fits and the
   `scheme` argument.
 
-## 13. Open questions
+## 15. Open questions
 
 1. Test data: simulated DGPs for unit tests; which real dataset to
    cross-check against EViews?
@@ -292,7 +348,7 @@ For each regressor x_i:
 3. Outlier critical values: fixed (3–3.5) or IIS-style levels tied to T.
 4. Granger with several regressors: conditioning set and output format.
 
-## 14. References (checked against publisher or RePEc records, Nov 2026)
+## 16. References (checked against publisher or RePEc records, Nov 2026)
 
 - Engle, R. F., Hendry, D. F. and Richard, J.-F. (1983). Exogeneity.
   *Econometrica* 51(2), 277–304.
