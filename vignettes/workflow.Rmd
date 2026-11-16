@@ -1,0 +1,216 @@
+---
+title: "An ADL analysis from start to finish"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{An ADL analysis from start to finish}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(width = 100)
+```
+
+This vignette follows one model through the sequence of the ADL chapters of
+*Applied Time Series Econometrics* (ATSE): choosing the lag orders,
+estimating, checking the model, testing simplifications and exogeneity, and
+reading the long run and the dynamics. Each step names the function that
+does it and the chapter where the method is explained.
+
+```{r}
+library(adltools)
+```
+
+## The data
+
+`adl_sim` holds three simulated quarterly series, 1990 Q1 to 2019 Q4. We
+model `y` given `x`. Because the data are simulated, the true model is
+known (see `?adl_sim`):
+$$
+y_t = 1 + 0.5\, y_{t-1} + 0.4\, x_t + 0.3\, x_{t-1} + \epsilon_t,
+$$
+an ADL(1,1) with long-run multiplier $(0.4 + 0.3)/(1 - 0.5) = 1.4$, and
+$x$ is exogenous. With real data none of this is known, which is why each
+step below is a test.
+
+Both series are stationary by construction. With real data, check that
+first: the tests in this package assume stationary variables (or, where the
+chapters say so, cointegrated ones).
+
+## 1. Choosing the lag orders
+
+`adl_ic()` estimates every model in a grid of orders on a **common sample**,
+so the information criteria compare like with like. By default each order
+is fitted both with and without the contemporaneous $x_t$: the search never
+drops $x_t$ on its own.
+
+```{r}
+adl_ic(y ~ x, data = adl_sim, max_order = c(3, 3))
+```
+
+BIC and Hannan–Quinn choose the ADL(1,1); AIC, which penalizes extra
+parameters less, prefers one more lag of $x$. We take the ADL(1,1) and let
+the diagnostics tell us whether anything is missing.
+
+## 2. Estimation (ADL1)
+
+```{r}
+fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
+summary(fit)
+```
+
+The labels in brackets are the parameters in the chapters' notation. The
+p-values use the normal distribution: in a dynamic regression the exact $t$
+and $F$ results do not hold, so both are asymptotic approximations anyway
+(`summary(fit, dist = "t")` gives the familiar `summary.lm()` values).
+
+The same model can be written in two other ways, which give identical
+estimates:
+
+```{r, eval = FALSE}
+adl(y ~ x, data = adl_sim, lags = list(y = 1, x = 0:1))
+adl(y ~ L(y, 1) + L(x, 0:1), data = adl_sim)
+```
+
+## 3. Is the model adequate? (ADL3)
+
+### Residual diagnostics
+
+```{r}
+adl_diagnostics(fit, bg_order = 4)
+```
+
+No evidence of serial correlation, ARCH effects, functional-form problems
+or non-normality. Breusch–Godfrey and ARCH-LM always use the conventional
+covariance: they test *for* the problems that a HAC covariance would
+correct, so using HAC there would presume the answer.
+
+### Parameter stability
+
+A break at a chosen date, and the predictive failure test from 2016 on, in
+its two forms (ADL3 and ADL4): static, one-step forecasts with the actual
+lagged values; and dynamic, one forecast path from 2015 Q4.
+
+```{r}
+chow_break_test(fit, c(2005, 1))
+chow_forecast_test(fit, c(2016, 1))
+chow_forecast_test(fit, c(2016, 1), type = "dynamic")
+```
+
+Nothing points to instability.
+
+## 4. Can the model be simplified? (ADL2)
+
+Most named dynamic models are restrictions on the ADL(1,1)
+$$
+y_t = \alpha_0 + \alpha_1 y_{t-1} + \beta_0 x_t + \beta_1 x_{t-1} + \epsilon_t .
+$$
+The linear ones are Wald tests with `adl_joint_test()`; `R` follows the
+order of the coefficients (or their names):
+
+```{r}
+names(coef(fit))
+taxonomy <- list(
+  "Static (alpha_1 = beta_1 = 0)"          = list(terms = c("y_lag1", "x_lag1")),
+  "AR(1) (beta_0 = beta_1 = 0)"            = list(variables = "x"),
+  "Distributed lag (alpha_1 = 0)"          = list(terms = "y_lag1"),
+  "Partial adjustment (beta_1 = 0)"        = list(terms = "x_lag1"),
+  "Dead start (beta_0 = 0)"                = list(terms = "x"),
+  "Unit long-run multiplier (alpha_1 + beta_0 + beta_1 = 1)" =
+    list(R = matrix(c(0, 1, 1, 1), 1), r = 1),
+  "Differences (alpha_1 = 1, beta_0 + beta_1 = 0)" =
+    list(R = rbind(c(0, 1, 0, 0), c(0, 0, 1, 1)), r = c(1, 0))
+)
+res <- lapply(taxonomy, function(h) do.call(adl_joint_test, c(list(fit), h)))
+data.frame(model = names(res),
+           chisq = sapply(res, `[[`, "statistic"),
+           df = sapply(res, `[[`, "df"),
+           p.value = signif(sapply(res, `[[`, "p.value"), 3),
+           row.names = NULL)
+```
+
+Every restriction is rejected except the unit long-run multiplier, with
+p = 0.15. Yet the true multiplier is 1.4: not rejecting a hypothesis does
+not make it true. The data are simply not precise enough to tell 1 from
+1.4, as the confidence interval of the long-run multiplier in section 6
+confirms.
+
+The common factor (COMFAC) restriction $\alpha_1\beta_0 + \beta_1 = 0$, a
+static regression with AR(1) errors, is nonlinear. `comfac_test()` gives the
+likelihood-ratio test, which also covers common factors of higher order, and
+the Wald form of the chapter:
+
+```{r}
+comfac_test(fit)
+comfac_test(fit, method = "Wald")
+```
+
+Both reject: the dynamics are not just autocorrelated errors.
+
+## 5. Can we condition on x? (ADL1, ADL3)
+
+Weak exogeneity asks whether $x$ responds to the equilibrium error, so
+that the long-run parameters would also appear in its own equation;
+strong exogeneity adds that $y$ does not Granger-cause $x$:
+
+```{r}
+weak_exogeneity_test(fit)
+weak_exogeneity_test(fit, strong = TRUE)
+```
+
+Neither is rejected, as expected: $x$ is exogenous by construction.
+
+The Wu–Hausman test checks whether $x_t$ is correlated with the error.
+It needs instruments; here further lags of $y$ and $x$:
+
+```{r}
+fit2 <- adl(y ~ x, data = adl_sim, order = c(1, 1), max_lag = 2)
+wu_hausman_test(fit2, instruments = list(y = 2, x = 2))
+```
+
+The warning matters more than the p-value. Since $x$ is AR(1), $x_{t-2}$
+and $y_{t-2}$ add almost nothing once $x_{t-1}$ is in the first stage:
+the instruments are weak, and the test is no evidence either way. (`max_lag
+= 2` keeps the fitted sample identical to the one the instruments need.)
+
+## 6. The long run and the dynamics (ADL2)
+
+```{r}
+adl_long_run(fit)
+```
+
+The estimate, 1.37, is close to the true 1.4, and its 95% interval
+(delta method) contains both 1 and 1.4.
+
+```{r, fig.width = 7, fig.height = 4}
+dyn <- adl_dynamics(fit)
+dyn
+plot(dyn, type = "cumulative")
+plot(dyn, type = "roots")
+```
+
+Half of the long-run effect is reached after one quarter (median lag) and
+99% after six; the single inverse root, 0.47, lies well inside the unit
+circle.
+
+## 7. The same steps, in the chapters
+
+| Step | Function | Chapter |
+|:--|:--|:--|
+| Lag orders | `adl_ic()` | ADL3 (information criteria) |
+| Estimation | `adl()`, `summary()` | ADL1 |
+| Diagnostics | `adl_diagnostics()`, `bg_test()`, `arch_test()`, `reset_test()`, `jb_test()` | ADL3 |
+| Stability | `chow_break_test()`, `chow_forecast_test()` | ADL3, ADL4 |
+| Restrictions | `adl_joint_test()`, `comfac_test()` | ADL2 |
+| Exogeneity | `weak_exogeneity_test()`, `wu_hausman_test()` | ADL1, ADL3 |
+| Causality | `granger_test()` (see `vignette("granger")`) | ADL3 |
+| Long run, dynamics | `adl_long_run()`, `adl_dynamics()` | ADL2 |
+
+## What this does not cover
+
+The package assumes stationary variables, or cointegrated ones where the
+chapters say so. It does not test for unit roots or cointegration and has
+no ECM estimation or bounds test: with integrated series, a finite long-run
+multiplier or a conventional Wald p-value does not establish a long-run
+relation. Unit-root tests are in `unitroottools`.

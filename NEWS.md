@@ -1,3 +1,8 @@
+# adltools 0.2.1.9000
+
+* New vignette `workflow`: one ADL analysis from lag selection to the long
+  run and the dynamics, following the ADL chapters.
+
 # adltools 0.2.1
 
 Fixes from the external audit of 2026-11-16 (medium priority):

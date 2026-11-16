@@ -60,7 +60,7 @@ chow_forecast_test(fit, c(2016, 1), type = "dynamic")
 comfac_test(fit)
 ```
 
-The vignette walks through the Granger procedure: `vignette("granger", package = "adltools")`.
+Two vignettes: a complete analysis following the ADL chapters, `vignette("workflow", package = "adltools")`, and the Granger procedure, `vignette("granger", package = "adltools")`.
 
 ## Related packages
 
