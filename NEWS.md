@@ -1,3 +1,13 @@
+# adltools 0.1.0.9000
+
+* Residual diagnostics: `bg_test()` (Breusch-Godfrey, LM and F forms),
+  `arch_test()` (ARCH-LM), `reset_test()` (RESET, conventional or HAC) and
+  `jb_test()` (Jarque-Bera), collected by `adl_diagnostics()`.
+  Breusch-Godfrey and ARCH-LM always use OLS, as ADL3 explains.
+* Stability: `chow_break_test()` (interaction form, HAC possible) and
+  `chow_forecast_test()`, static (1-step, exact Omega with parameter
+  uncertainty) or dynamic (N-step path, Omega from the psi-weights).
+
 # adltools 0.1.0
 
 * `tidy()` and `glance()` methods for fits, tests, Granger results and
