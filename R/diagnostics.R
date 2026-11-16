@@ -42,11 +42,17 @@ bg_test <- function(fit, order = 2, dist = c("chisq", "F"), alpha = 0.05) {
   colnames(U) <- paste0("u_lag", seq_len(order))
   X <- stats::model.matrix(fit$lm)
   aux <- stats::lm.fit(cbind(X, U), u)
-  r2 <- 1 - sum(aux$residuals^2) / sum((u - mean(u))^2)
+  if (aux$rank < ncol(X) + order) {
+    stop("The auxiliary regression is rank deficient; reduce `order`.", call. = FALSE)
+  }
   df_res <- n - ncol(X) - order
-  lm_stat <- n * r2
-  # F form: (RSS_r - RSS_u)/s / (RSS_u / df), with RSS_r = sum(u^2)
+  # LM = n R^2 with R^2 = 1 - RSS_u / sum(u^2): the share of the residuals
+  # explained by the auxiliary regression. Uncentred, so it is also valid
+  # (and non-negative) without an intercept; equal to the centred form when
+  # the model has one, since the residuals then have mean zero.
   rss_u <- sum(aux$residuals^2)
+  lm_stat <- n * (1 - rss_u / sum(u^2))
+  # F form: (RSS_r - RSS_u)/s / (RSS_u / df), with RSS_r = sum(u^2)
   f_stat <- ((sum(u^2) - rss_u) / order) / (rss_u / df_res)
   inf <- if (dist == "chisq") {
     list(statistic = lm_stat, distribution = "chi2", df = order,

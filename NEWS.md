@@ -1,5 +1,32 @@
 # adltools 0.2.0.9000
 
+Fixes from the external audit of 2026-11-16 (high priority):
+
+* Column names: a variable whose name equals a generated lag (e.g. `x_lag1`
+  together with lag 1 of `x`) silently shared one column. Such clashes are
+  now an error.
+* Gaps in the time index (a missing period in quarterly dates, a skipped
+  integer, ...) are now an error: lags are taken period by period, and a gap
+  made the "lag" two periods old. Irregular data are not supported.
+* `bg_test()` without an intercept could return a negative LM statistic; it
+  now uses the uncentred R-squared and matches `lmtest::bgtest()`.
+* `wu_hausman_test()` uses the fitted sample (never more observations than
+  the fit; fewer only where the instrument lags need earlier data, with a
+  message), resolves the regressor's column from the term map, checks the
+  instrument rank, and reports the conventional first-stage F (and the HAC
+  Wald / q with HAC); 10 is described as a rule of thumb.
+* `weak_exogeneity_test()` stops on unstable models, conditions the marginal
+  equation on the controls, the trend and (with several regressors) the
+  other regressors, and documents its conditioning set and assumptions.
+* Unstable models: `adl_long_run()` now returns `NA`, like `adl_dynamics()`,
+  which still traces the multipliers over 20 lags by default.
+* `adl_dynamics()`: the automatic horizon covers every distributed lag and
+  stops only when the cumulative response has settled for a full AR cycle
+  (it stopped at an early overshoot); the mean lag is documented as a signed
+  moment.
+* Lag values are validated before coercion (`lags = list(x = 1.9)` was
+  silently truncated to 1).
+
 * **Changed:** `start` now means the first observation of the estimation
   sample, with the lags taken from the observations before it, as in
   `dynlm` and EViews. In 0.1.0 and 0.2.0 the first max(lags) observations

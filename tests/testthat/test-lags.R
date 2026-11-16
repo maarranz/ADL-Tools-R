@@ -63,3 +63,22 @@ test_that("max_lag fixes a common sample; trend and unlagged terms", {
   expect_equal(des$terms$role, c("ar", "dl", "unlagged", "trend"))
   expect_error(build_design(d$z, lags, max_lag = 0), "below")
 })
+
+test_that("column-name clashes are rejected (audit repro A)", {
+  set.seed(7)
+  d <- data.frame(x = rnorm(100), y = rnorm(100))
+  a <- transform(d, x_lag1 = seq_len(nrow(d)))
+  expect_error(suppressMessages(adl(y ~ L(x, 1) + x_lag1, a)),
+               "'x_lag1' would be both lag 1 of 'x' and the variable 'x_lag1'")
+  expect_error(suppressMessages(adl(y ~ x | x_lag1, a, order = c(0, 1))), "clash")
+  # no clash when the lag is not generated
+  expect_silent(suppressMessages(adl(y ~ L(x, 2) + x_lag1, a)))
+})
+
+test_that("lag values are validated before coercion", {
+  expect_error(normalize_lags("y", "x", lags = list(x = 1.9)), "whole")
+  expect_error(normalize_lags("y", "x", lags = list(x = Inf)), "whole")
+  m <- stats::ts(cbind(y = rnorm(30), x = rnorm(30)))
+  d <- as_adl_data(m, c("y", "x"))
+  expect_error(build_design(d$z, list(y = 1L, x = 0L), max_lag = c(2, 3)), "single")
+})

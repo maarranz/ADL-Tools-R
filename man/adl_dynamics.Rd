@@ -17,9 +17,11 @@ adl_dynamics(
 
 \item{x}{Regressors to analyse; by default all the lagged regressors.}
 
-\item{horizon}{Last lag computed. \code{NULL} (default) stops at the first lag
-whose cumulative multiplier reaches \code{tolerance} of the long-run
-multiplier (at most \code{max_horizon}).}
+\item{horizon}{Last lag computed. \code{NULL} (default) chooses it
+automatically: at least the last distributed lag, and then the first lag
+from which the cumulative multiplier stays within \code{1 - tolerance} of the
+long-run multiplier for a full AR cycle (at most \code{max_horizon}). For an
+unstable model, or one with a zero long run, the default is 20 lags.}
 
 \item{tolerance}{Share of the long-run multiplier that sets the automatic
 horizon.}
@@ -46,8 +48,16 @@ all inverse roots lie inside the unit circle.
 The multipliers follow the recursion
 \deqn{d_h = \beta_h + \sum_{i=1}^{p} \alpha_i d_{h-i},}
 with \eqn{\beta_h = 0} beyond the last lag. The mean lag is
-\eqn{B'(1)/B(1) + \sum i\alpha_i / C(1)}; the median lag is the first lag
-at which the cumulative multiplier reaches half the long-run multiplier.
+\eqn{B'(1)/B(1) + \sum i\alpha_i / C(1)}, the first moment of the
+multipliers weighted by \eqn{d_h/k}; when the multipliers change sign it
+is a signed moment and can be negative or exceed the horizon, so read it
+as an average lag only for responses of one sign. The median lag is the
+first lag at which the cumulative multiplier reaches half the long-run
+multiplier (the first crossing, for responses that overshoot).
+
+For an unstable model the multipliers are still computed for a finite
+horizon, showing how the response grows, but the long-run multiplier,
+the percentages and the mean and median lags are \code{NA}.
 
 These are point estimates; their sampling uncertainty is not reported.
 }

@@ -37,10 +37,14 @@ adjustment).}
 }
 \value{
 An object of class \code{"adltools_test"}, with the estimate \code{xi},
-and \code{first_stage} (a Wald test that the instruments are jointly zero in
-the first-stage regression, and its F form). A warning is given when
-the first-stage F is below 10 (weak instruments): the test is then not
-reliable evidence either way.
+the \code{sample} used (the fitted sample, or the part of it where the
+instruments exist), and
+\code{first_stage}: the conventional F test that the instruments are
+jointly zero (\code{F}, \code{df}, \code{p.value}) and, with HAC, the robust Wald
+statistic and its value divided by the number of instruments
+(\code{hac_wald}, \code{hac_F}). A warning is given when the conventional F is
+below the rule-of-thumb value 10 (weak instruments): the test is then
+not reliable evidence either way.
 }
 \description{
 Tests whether a contemporaneous regressor \eqn{x_t} is correlated with
@@ -58,8 +62,10 @@ Instruments are further lags of the variables in the model, given as a
 named list of lags, e.g. \code{list(y = 2, x = 2)} for \eqn{y_{t-2}} and
 \eqn{x_{t-2}}. They are valid only if they do not belong in the ADL
 equation itself, so run this test after checking the lag order (e.g. with
-\code{\link[=bg_test]{bg_test()}}). The model and the auxiliary regressions are re-estimated on
-the sample where the instruments exist.
+\code{\link[=bg_test]{bg_test()}}). The test uses the fitted sample, never more: if the
+instrument lags need observations from before it, the first fitted
+observations are dropped with a message (refit with \code{max_lag} equal to the
+largest instrument lag to keep the same sample).
 }
 \examples{
 # Simultaneity: x_t depends on the error of the y equation

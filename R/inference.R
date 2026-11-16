@@ -136,9 +136,14 @@ adl_joint_test <- function(fit, terms = NULL, variables = NULL, R = NULL, r = NU
 #' \eqn{C(1) = 1 - \sum \alpha_i} and \eqn{B_i(1)} is the sum of the lag
 #' coefficients of regressor i. Standard errors by the delta method.
 #'
-#' The long run is only meaningful when the model is dynamically stable
-#' (all roots of \eqn{C(z)} outside the unit circle); a warning is given
-#' otherwise.
+#' The long run exists only when the model is dynamically stable (all roots
+#' of \eqn{C(z)} outside the unit circle); otherwise the multipliers are
+#' `NA`, with a warning. The delta-method standard errors assume a stable
+#' model with \eqn{C(1)} well away from zero: near a unit root the ratio is
+#' weakly identified and symmetric intervals can be misleading. For an
+#' unlagged dummy, the reported value is the long-run effect of keeping the
+#' dummy at one permanently; for a one-off pulse dummy that is a
+#' hypothetical, not the cumulated effect of the pulse.
 #'
 #' @param fit An `"adl"` object.
 #' @inheritParams adl_vcov
@@ -170,13 +175,9 @@ adl_long_run <- function(fit, cov_type = c("nonrobust", "HAC"), maxlags = NULL,
   stable <- is_stable(fit)
   if (!stable) {
     warning("The model is not dynamically stable (a root of C(z) is on or ",
-            "inside the unit circle); long-run multipliers are not meaningful.",
-            call. = FALSE)
+            "inside the unit circle): the long-run multipliers do not exist and ",
+            "are reported as NA.", call. = FALSE)
   }
-  if (abs(C1) < sqrt(.Machine$double.eps)) {
-    stop("C(1) is zero: the long-run multipliers are not defined.", call. = FALSE)
-  }
-
   rows <- list()
   if (fit$intercept) rows[["(Intercept)"]] <- names(b) == "(Intercept)"
   for (v in c(fit$x, fit$unlagged)) rows[[v]] <- info$variable == v & info$role != "ar"
@@ -190,6 +191,7 @@ adl_long_run <- function(fit, cov_type = c("nonrobust", "HAC"), maxlags = NULL,
     g[ar] <- B1 / C1^2
     se[i] <- sqrt(as.numeric(t(g) %*% V %*% g))
   }
+  if (!stable) est[] <- se[] <- NA_real_
   tab <- coef_table(names(rows), est, se, dist, df_resid(fit), alpha)
   structure(tab, cov_type = cov_type, maxlags = attr(V, "maxlags"),
             distribution = dist,

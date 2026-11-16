@@ -14,8 +14,10 @@
 #' named list of lags, e.g. `list(y = 2, x = 2)` for \eqn{y_{t-2}} and
 #' \eqn{x_{t-2}}. They are valid only if they do not belong in the ADL
 #' equation itself, so run this test after checking the lag order (e.g. with
-#' [bg_test()]). The model and the auxiliary regressions are re-estimated on
-#' the sample where the instruments exist.
+#' [bg_test()]). The test uses the fitted sample, never more: if the
+#' instrument lags need observations from before it, the first fitted
+#' observations are dropped with a message (refit with `max_lag` equal to the
+#' largest instrument lag to keep the same sample).
 #'
 #' @param fit An `"adl"` object.
 #' @param x The regressor tested; it must enter at lag 0. By default the
@@ -26,10 +28,14 @@
 #' @param dist `"normal"` (default) or `"t"`.
 #' @param alpha Significance level for the decision.
 #' @return An object of class `"adltools_test"`, with the estimate `xi`,
-#'   and `first_stage` (a Wald test that the instruments are jointly zero in
-#'   the first-stage regression, and its F form). A warning is given when
-#'   the first-stage F is below 10 (weak instruments): the test is then not
-#'   reliable evidence either way.
+#'   the `sample` used (the fitted sample, or the part of it where the
+#'   instruments exist), and
+#'   `first_stage`: the conventional F test that the instruments are
+#'   jointly zero (`F`, `df`, `p.value`) and, with HAC, the robust Wald
+#'   statistic and its value divided by the number of instruments
+#'   (`hac_wald`, `hac_F`). A warning is given when the conventional F is
+#'   below the rule-of-thumb value 10 (weak instruments): the test is then
+#'   not reliable evidence either way.
 #' @references Wu, D.-M. (1973). Alternative tests of independence between
 #'   stochastic regressors and disturbances. *Econometrica*, 41(4), 733-750.
 #'
@@ -73,18 +79,39 @@ wu_hausman_test <- function(fit, x = NULL, instruments,
   }
   all_lags <- fit$lags
   for (v in names(instruments)) all_lags[[v]] <- sort(unique(c(all_lags[[v]], instruments[[v]])))
-  m <- max(unlist(all_lags))
+  m_inst <- max(unlist(all_lags))
+  # build on all the data, then keep exactly the fitted sample
   des <- build_design(fit$data, all_lags, unlagged = fit$unlagged, trend = fit$trend,
-                      max_lag = m)
+                      max_lag = m_inst)
+  keep <- des$index %in% fit$index
+  if (sum(keep) < length(fit$index)) {
+    message("The instrument lags need ", m_inst, " earlier observations: the test ",
+            "uses ", sum(keep), " of the ", length(fit$index), " fitted observations (",
+            format(des$index[keep][1]), " - ", format(des$index[keep][sum(keep)]),
+            "). Refit with `max_lag = ", m_inst, "` to test on the same sample.")
+  }
+  if (sum(keep) <= length(fit$terms$column) + 3) {
+    stop("Too few observations left for the test.", call. = FALSE)
+  }
+  frame <- des$frame[keep, , drop = FALSE]
+  if (fit$trend) frame$trend <- seq_len(nrow(frame))
   model_cols <- fit$terms$column
+  x_col <- fit$terms$column[fit$terms$variable == x & fit$terms$lag == 0 &
+                              fit$terms$role == "dl"]
   inst_cols <- setdiff(des$terms$column, model_cols)
-  yv <- des$frame[[des$y_col]]
-  Xm <- as.matrix(des$frame[model_cols])
+  yv <- frame[[des$y_col]]
+  Xm <- as.matrix(frame[model_cols])
   if (fit$intercept) Xm <- cbind(`(Intercept)` = 1, Xm)
-  Z <- as.matrix(des$frame[inst_cols])
-  # first stage: x_t on instruments and the other regressors
-  W <- cbind(Xm[, colnames(Xm) != x, drop = FALSE], Z)
-  fs <- stats::lm(des$frame[[x]] ~ 0 + W)
+  Z <- as.matrix(frame[inst_cols])
+  # first stage: x_t on the other regressors and the instruments
+  W0 <- Xm[, colnames(Xm) != x_col, drop = FALSE]
+  W <- cbind(W0, Z)
+  xv <- frame[[x_col]]
+  fs <- stats::lm(xv ~ 0 + W)
+  if (fs$rank < ncol(W)) {
+    stop("The instruments are collinear with each other or with the regressors ",
+         "of the model.", call. = FALSE)
+  }
   names(fs$coefficients) <- colnames(W)
   v_hat <- stats::residuals(fs)
   n <- length(yv)
@@ -92,15 +119,21 @@ wu_hausman_test <- function(fit, x = NULL, instruments,
   vc <- function(m) if (cov_type == "HAC") {
     sandwich::NeweyWest(m, lag = lags, prewhite = FALSE, adjust = FALSE)
   } else stats::vcov(m)
-  Vfs <- vc(fs)
   q <- ncol(Z)
-  Rfs <- cbind(matrix(0, q, ncol(W) - q), diag(q))
-  fs_w <- wald_stat(stats::coef(fs), Vfs, Rfs, rep(0, q))
-  first_stage <- list(statistic = fs_w, df = q, F = fs_w / q,
-                      p.value = stats::pchisq(fs_w, q, lower.tail = FALSE))
-  if (fs_w / q < 10) {
-    warning("The instruments look weak (first-stage F = ", format(signif(fs_w / q, 3)),
-            " < 10): the test is not reliable evidence either way.", call. = FALSE)
+  # conventional first-stage F (RSS form) and, with HAC, the robust Wald / q
+  rss1 <- sum(v_hat^2)
+  rss0 <- sum(stats::lm.fit(W0, xv)$residuals^2)
+  F_conv <- ((rss0 - rss1) / q) / (rss1 / (n - ncol(W)))
+  Rfs <- cbind(matrix(0, q, ncol(W0)), diag(q))
+  w_rob <- if (cov_type == "HAC") wald_stat(stats::coef(fs), vc(fs), Rfs, rep(0, q))
+  first_stage <- list(F = F_conv, df = c(q, n - ncol(W)),
+                      p.value = stats::pf(F_conv, q, n - ncol(W), lower.tail = FALSE),
+                      hac_wald = w_rob,
+                      hac_F = if (!is.null(w_rob)) w_rob / q)
+  if (F_conv < 10) {
+    warning("The instruments look weak (first-stage F = ", format(signif(F_conv, 3)),
+            ", below the rule-of-thumb 10): the test is not reliable evidence ",
+            "either way.", call. = FALSE)
   }
   # augmented ADL
   aug <- stats::lm(yv ~ 0 + cbind(Xm, v_hat))
@@ -114,7 +147,8 @@ wu_hausman_test <- function(fit, x = NULL, instruments,
     alpha = alpha, reject_null = inf$p.value < alpha, nobs = n,
     cov_type = cov_type, maxlags = lags, n_restrictions = 1L,
     xi = b, first_stage = first_stage,
-    instruments = inst_cols
+    instruments = inst_cols,
+    sample = c(format(des$index[keep][1]), format(des$index[keep][sum(keep)]))
   ), inf), "Wu-Hausman test of predeterminedness")
 }
 
@@ -145,12 +179,28 @@ wu_hausman_test <- function(fit, x = NULL, instruments,
 #' limit. `x_level = FALSE` gives the regression exactly as written in ADL3,
 #' appropriate only for cointegrated I(1) variables.
 #'
-#' Choose `lags` so that \eqn{\nu_t} is free of serial correlation (the
-#' marginal regression is returned in `$marginal` for checking).
+#' The marginal equation conditions on: lags of \eqn{\Delta x} and
+#' \eqn{\Delta y}; with several regressors, lags of the changes of the
+#' others (and, with `x_level`, their levels at \eqn{t-1}); the controls
+#' entered after `|` (at \eqn{t-1}); and the trend, if the model has one.
+#' Because \eqn{\widehat{ec}_{t-1}} is linear, including the controls and
+#' trend there is equivalent to building their long-run terms into the
+#' equilibrium error. With `x_level = TRUE`, \eqn{\kappa} is the coefficient
+#' of \eqn{y_{t-1}} given the regressor levels, so it does not depend on the
+#' estimated long-run multipliers. The strong test adds the lagged changes
+#' of \eqn{y} to the null, within this same conditioning set.
+#'
+#' The test needs a stable model (there is no equilibrium error otherwise)
+#' and an adequate marginal equation: choose `lags` so that \eqn{\nu_t} is
+#' free of serial correlation (the marginal regression is returned in
+#' `$marginal` for checking). It addresses the part of weak exogeneity the
+#' data can speak to (whether \eqn{x} responds to the equilibrium error);
+#' variation-freeness of the parameters has to be argued from the economics.
 #'
 #' @param fit An `"adl"` object.
 #' @param x The regressor tested; by default the only regressor.
-#' @param lags Number of lags \eqn{s} of \eqn{\Delta x} and \eqn{\Delta y}.
+#' @param lags Number of lags \eqn{s} of the changes in the marginal
+#'   equation.
 #' @param strong Test strong exogeneity instead of weak?
 #' @param x_level Include \eqn{x_{t-1}} in the marginal regression (see
 #'   Details).
@@ -186,23 +236,38 @@ weak_exogeneity_test <- function(fit, x = NULL, lags = 1, strong = FALSE,
   dist <- dist %||% if (strong) "chisq" else "normal"
   dist <- match.arg(dist, if (strong) c("chisq", "F") else c("normal", "t"))
 
-  lr <- suppressWarnings(adl_long_run(fit))
+  if (!is_stable(fit)) {
+    stop("The model is not dynamically stable, so there is no long-run ",
+         "relation and no equilibrium error to test against.", call. = FALSE)
+  }
+  lr <- adl_long_run(fit)
   k <- stats::setNames(lr$estimate, lr$term)
   z <- zoo::coredata(fit$data)
   N <- nrow(z)
+  # equilibrium error from y and the distributed-lag regressors; the
+  # intercept, controls and trend enter the marginal equation directly,
+  # which gives the same kappa as building their long-run terms into ec
   ec <- z[, fit$y] - as.numeric(z[, fit$x, drop = FALSE] %*% k[fit$x])
-  dx <- c(NA, diff(z[, x]))
-  dy <- c(NA, diff(z[, fit$y]))
   lagv <- function(v, j) c(rep(NA, j), v[seq_len(N - j)])
-  cols <- list(dx = dx)
-  for (j in seq_len(lags)) cols[[paste0("dx_lag", j)]] <- lagv(dx, j)
-  for (j in seq_len(lags)) cols[[paste0("dy_lag", j)]] <- lagv(dy, j)
+  dv <- function(v) c(NA, diff(z[, v]))
+  cols <- list(dx = dv(x))
+  others <- setdiff(fit$x, x)
+  for (j in seq_len(lags)) cols[[paste0("dx_lag", j)]] <- lagv(dv(x), j)
+  for (j in seq_len(lags)) cols[[paste0("dy_lag", j)]] <- lagv(dv(fit$y), j)
+  for (v in others) for (j in seq_len(lags)) {
+    cols[[paste0("d", v, "_lag", j)]] <- lagv(dv(v), j)
+  }
   cols$ec_lag1 <- lagv(ec, 1)
-  if (x_level) cols$x_lag1 <- lagv(z[, x], 1)
+  if (x_level) {
+    cols$x_lag1 <- lagv(z[, x], 1)
+    for (v in others) cols[[paste0(v, "_level_lag1")]] <- lagv(z[, v], 1)
+  }
+  for (v in fit$unlagged) cols[[paste0(v, "_lag1")]] <- lagv(z[, v], 1)
   df <- as.data.frame(cols)
   # same observations as the ADL fit where possible
   keep <- stats::complete.cases(df) & zoo::index(fit$data) %in% fit$index
   df <- df[keep, , drop = FALSE]
+  if (fit$trend) df$trend <- seq_len(nrow(df))
   marg <- stats::lm(dx ~ ., data = df)
   n <- nrow(df)
   lg <- hac_lags(maxlags, cov_type, n)

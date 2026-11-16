@@ -40,9 +40,14 @@ C(1)}, and the long-run intercept \eqn{k_0 = \alpha_0 / C(1)}, where
 coefficients of regressor i. Standard errors by the delta method.
 }
 \details{
-The long run is only meaningful when the model is dynamically stable
-(all roots of \eqn{C(z)} outside the unit circle); a warning is given
-otherwise.
+The long run exists only when the model is dynamically stable (all roots
+of \eqn{C(z)} outside the unit circle); otherwise the multipliers are
+\code{NA}, with a warning. The delta-method standard errors assume a stable
+model with \eqn{C(1)} well away from zero: near a unit root the ratio is
+weakly identified and symmetric intervals can be misleading. For an
+unlagged dummy, the reported value is the long-run effect of keeping the
+dummy at one permanently; for a one-off pulse dummy that is a
+hypothetical, not the cumulated effect of the pulse.
 }
 \examples{
 set.seed(1)

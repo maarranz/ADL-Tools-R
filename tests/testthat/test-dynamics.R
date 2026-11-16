@@ -107,3 +107,33 @@ test_that("printing, plotting and argument checks", {
   expect_error(adl_dynamics(fit, tolerance = 1), "tolerance")
   expect_error(adl_dynamics(fit, horizon = -1), "horizon")
 })
+
+test_that("automatic horizon does not stop at an early overshoot (audit repro E)", {
+  set.seed(7)
+  d <- data.frame(x = rnorm(100), y = rnorm(100))
+  e <- transform(d, y = 2 * x - c(0, head(x, -1)) + rnorm(100, sd = .01))
+  f <- adl(y ~ x, stats::ts(e[c("y", "x")]), order = c(0, 1))
+  dy <- adl_dynamics(f)
+  expect_equal(dy$summary$horizon, 1)
+  expect_equal(nrow(dy$effects), 2)
+  # with an AR part the horizon covers the distributed lags and settles
+  f2 <- adl(y ~ x, data = adl_sim, order = c(1, 3))
+  d2 <- adl_dynamics(f2)
+  expect_gte(d2$summary$horizon, 3)
+  k <- d2$summary$long_run
+  last_M <- tail(d2$effects$cumulative, 1)
+  expect_lte(abs(last_M - k), 0.01 * abs(k))
+  # and it stays there for the next AR cycle
+  longer <- adl_dynamics(f2, horizon = d2$summary$horizon + 1)
+  expect_lte(abs(tail(longer$effects$cumulative, 1) - k), 0.01 * abs(k))
+})
+
+test_that("unstable model: multipliers over 20 lags, NA summaries", {
+  fit <- dyn_fit()
+  fit$lm$coefficients[["y_lag1"]] <- 1.1
+  expect_message(expect_warning(du <- adl_dynamics(fit), "not dynamically stable"),
+                 "up to lag 20")
+  expect_equal(du$summary$horizon, c(20L, 20L))
+  expect_true(all(is.na(du$summary$long_run)))
+  expect_true(all(is.na(du$effects$pct_cumulative)))
+})

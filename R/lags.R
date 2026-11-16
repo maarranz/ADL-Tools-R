@@ -63,8 +63,8 @@ normalize_lags <- function(y, x, order = NULL, first_lag = 0, lags = NULL) {
     names(out) <- c(y, x)
   }
 
-  out <- lapply(out, function(l) sort(unique(as.integer(l))))
   for (v in names(out)) check_whole(out[[v]], paste0("lags for '", v, "'"))
+  out <- lapply(out, function(l) sort(unique(as.integer(l))))
   if (any(out[[y]] < 1)) {
     stop("Lags of the dependent variable must be 1 or more.", call. = FALSE)
   }
@@ -94,6 +94,7 @@ build_design <- function(z, lags, unlagged = character(0), trend = FALSE,
   m <- max(c(0L, unlist(lags)))
   if (!is.null(max_lag)) {
     check_whole(max_lag, "max_lag")
+    if (length(max_lag) != 1) stop("`max_lag` must be a single number.", call. = FALSE)
     if (max_lag < m) stop("`max_lag` (", max_lag, ") is below the largest lag (",
                           m, ").", call. = FALSE)
     m <- as.integer(max_lag)
@@ -135,8 +136,26 @@ build_design <- function(z, lags, unlagged = character(0), trend = FALSE,
                                              column = "trend", role = "trend")
   }
 
-  frame <- as.data.frame(cols, check.names = FALSE)
   terms <- if (length(terms)) do.call(rbind, terms) else
+    data.frame(variable = character(), lag = integer(), column = character(),
+               role = character())
+  # every column must be produced by exactly one term (a variable called
+  # "x_lag1" would otherwise collide with lag 1 of "x")
+  all_cols <- c(safe[[y]], terms$column)
+  owner <- c(paste0("the dependent variable '", y, "'"),
+             ifelse(terms$role %in% c("ar", "dl") & terms$lag > 0,
+                    paste0("lag ", terms$lag, " of '", terms$variable, "'"),
+                    paste0("the variable '", terms$variable, "'")))
+  dup <- unique(all_cols[duplicated(all_cols)])
+  if (length(dup)) {
+    clash <- vapply(dup, function(nm) paste0("'", nm, "' would be both ",
+                                             paste(owner[all_cols == nm], collapse = " and ")),
+                    character(1))
+    stop("Column name clash: ", paste(clash, collapse = "; "),
+         ". Rename the variable.", call. = FALSE)
+  }
+  frame <- as.data.frame(cols, check.names = FALSE)
+  terms <- if (nrow(terms)) terms else
     data.frame(variable = character(), lag = integer(), column = character(),
                role = character())
   list(frame = frame, index = zoo::index(z)[rows], terms = terms,
@@ -148,7 +167,7 @@ build_design <- function(z, lags, unlagged = character(0), trend = FALSE,
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
 check_whole <- function(v, what) {
-  if (!is.numeric(v) || anyNA(v) || any(v != round(v))) {
+  if (!is.numeric(v) || anyNA(v) || any(!is.finite(v)) || any(v != round(v))) {
     stop("`", what, "` must contain whole numbers.", call. = FALSE)
   }
   invisible(v)

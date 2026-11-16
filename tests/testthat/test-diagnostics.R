@@ -70,3 +70,16 @@ test_that("diagnostics battery", {
   expect_error(bg_test(fit, order = 0), "integer >= 1")
   expect_error(reset_test(fit, power = 1), ">= 2")
 })
+
+test_that("BG without intercept matches lmtest and is non-negative (audit repro D)", {
+  skip_if_not_installed("lmtest")
+  set.seed(7)
+  d <- stats::ts(data.frame(x = rnorm(100), y = rnorm(100)))
+  f <- adl(y ~ x, d, order = c(0, 0), intercept = FALSE)
+  b <- bg_test(f)
+  ref <- lmtest::bgtest(f$lm, order = 2, fill = 0)
+  expect_equal(b$statistic, unname(ref$statistic))
+  expect_gte(b$statistic, 0)
+  expect_equal(bg_test(f, dist = "F")$statistic,
+               unname(lmtest::bgtest(f$lm, order = 2, type = "F", fill = 0)$statistic))
+})

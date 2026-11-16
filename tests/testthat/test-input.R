@@ -75,3 +75,23 @@ test_that("tsibble input gives the same data", {
   keyed <- tsibble::as_tsibble(m)  # long form, one key
   expect_error(as_adl_data(keyed, "value"), "key variables")
 })
+
+test_that("gaps in the time index are an error (audit repro C)", {
+  set.seed(7)
+  d <- data.frame(x = rnorm(100), y = rnorm(100))
+  g <- transform(d, t = c(1:50, 52:101))
+  expect_error(adl(y ~ x, g, order = c(0, 1), time = "t"), "between 50 and 52")
+  q <- seq(as.Date("2000-01-01"), by = "quarter", length.out = 20)
+  dq <- data.frame(date = q[-7], y = rnorm(19), x = rnorm(19))
+  expect_error(as_adl_data(dq, c("y", "x")), "gaps")
+  # regular indexes pass: monthly and quarterly dates, yearqtr, ts, row order
+  mo <- data.frame(date = zoo::as.Date.yearmon(zoo::as.yearmon(2000 + 0:29 / 12), frac = 1),  # month ends
+                   y = rnorm(30), x = rnorm(30))
+  expect_equal(as_adl_data(mo, c("y", "x"))$n, 30)
+  dq2 <- data.frame(date = q, y = rnorm(20), x = rnorm(20))
+  expect_equal(as_adl_data(dq2, c("y", "x"))$n, 20)
+  expect_equal(as_adl_data(zoo::zoo(cbind(y = 1:8, x = 1:8),
+                                    zoo::as.yearqtr(2000 + 0:7 / 4)), c("y", "x"))$n, 8)
+  zq <- zoo::zoo(cbind(y = 1:7, x = 1:7), zoo::as.yearqtr(2000 + c(0:3, 5:7) / 4))
+  expect_error(as_adl_data(zq, c("y", "x")), "gaps")
+})

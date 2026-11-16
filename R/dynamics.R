@@ -18,16 +18,26 @@
 #' The multipliers follow the recursion
 #' \deqn{d_h = \beta_h + \sum_{i=1}^{p} \alpha_i d_{h-i},}
 #' with \eqn{\beta_h = 0} beyond the last lag. The mean lag is
-#' \eqn{B'(1)/B(1) + \sum i\alpha_i / C(1)}; the median lag is the first lag
-#' at which the cumulative multiplier reaches half the long-run multiplier.
+#' \eqn{B'(1)/B(1) + \sum i\alpha_i / C(1)}, the first moment of the
+#' multipliers weighted by \eqn{d_h/k}; when the multipliers change sign it
+#' is a signed moment and can be negative or exceed the horizon, so read it
+#' as an average lag only for responses of one sign. The median lag is the
+#' first lag at which the cumulative multiplier reaches half the long-run
+#' multiplier (the first crossing, for responses that overshoot).
+#'
+#' For an unstable model the multipliers are still computed for a finite
+#' horizon, showing how the response grows, but the long-run multiplier,
+#' the percentages and the mean and median lags are `NA`.
 #'
 #' These are point estimates; their sampling uncertainty is not reported.
 #'
 #' @param fit An `"adl"` object.
 #' @param x Regressors to analyse; by default all the lagged regressors.
-#' @param horizon Last lag computed. `NULL` (default) stops at the first lag
-#'   whose cumulative multiplier reaches `tolerance` of the long-run
-#'   multiplier (at most `max_horizon`).
+#' @param horizon Last lag computed. `NULL` (default) chooses it
+#'   automatically: at least the last distributed lag, and then the first lag
+#'   from which the cumulative multiplier stays within `1 - tolerance` of the
+#'   long-run multiplier for a full AR cycle (at most `max_horizon`). For an
+#'   unstable model, or one with a zero long run, the default is 20 lags.
 #' @param tolerance Share of the long-run multiplier that sets the automatic
 #'   horizon.
 #' @param max_horizon Upper limit for the automatic horizon.
@@ -78,6 +88,11 @@ adl_dynamics <- function(fit, x = NULL, horizon = NULL, tolerance = 0.99,
             "and the mean and median lags are not defined.", call. = FALSE)
   }
   C1 <- 1 - sum(alpha)
+  default_horizon <- 20L
+  if (!stable && is.null(horizon)) {
+    message("Unstable model: multipliers shown up to lag ", default_horizon,
+            " (set `horizon` for more).")
+  }
 
   effects <- list()
   summ <- list()
@@ -85,19 +100,35 @@ adl_dynamics <- function(fit, x = NULL, horizon = NULL, tolerance = 0.99,
     beta <- poly_coefs(b, info, v, from = 0)
     lr <- if (stable && abs(C1) > sqrt(.Machine$double.eps)) sum(beta) / C1 else NA_real_
     has_lr <- is.finite(lr) && abs(lr) > sqrt(.Machine$double.eps)
-    d <- numeric(0)
-    H <- if (is.null(horizon)) max_horizon else horizon
+    # multipliers up to the largest horizon that may be needed
+    H <- if (!is.null(horizon)) horizon else if (has_lr) max_horizon else
+      max(default_horizon, length(beta) - 1)
+    d <- numeric(H + 1)
     for (h in 0:H) {
       bh <- if (h + 1 <= length(beta)) beta[h + 1] else 0
       ar <- 0
       for (i in seq_along(alpha)) if (h - i >= 0) ar <- ar + alpha[i] * d[h - i + 1]
-      d <- c(d, bh + ar)
-      if (is.null(horizon) && has_lr && sum(d) / lr >= tolerance) break
+      d[h + 1] <- bh + ar
     }
-    if (is.null(horizon) && has_lr && sum(d) / lr < tolerance) {
-      warning("The cumulative multiplier of '", v, "' did not reach ",
-              format(100 * tolerance), "% of the long-run multiplier by lag ",
-              max_horizon, ".", call. = FALSE)
+    if (is.null(horizon) && has_lr) {
+      # first lag, at or after the last distributed-lag term, from which the
+      # cumulative multiplier stays within (1 - tolerance) of the long run for
+      # a full AR cycle (p further lags): an early overshoot does not stop it
+      Mfull <- cumsum(d)
+      close <- abs(lr - Mfull) <= (1 - tolerance) * abs(lr)
+      p_ar <- length(alpha)
+      first_ok <- NA_integer_
+      for (h in (length(beta) - 1):(H - p_ar)) {
+        if (h < 0) next
+        if (all(close[(h + 1):(h + 1 + p_ar)])) { first_ok <- h; break }
+      }
+      if (is.na(first_ok)) {
+        warning("The cumulative multiplier of '", v, "' did not settle within ",
+                format(100 * (1 - tolerance)), "% of the long-run multiplier by lag ",
+                max_horizon, ".", call. = FALSE)
+        first_ok <- H
+      }
+      d <- d[seq_len(first_ok + 1)]
     }
     M <- cumsum(d)
     pct <- if (has_lr) 100 * d / lr else rep(NA_real_, length(d))

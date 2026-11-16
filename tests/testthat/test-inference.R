@@ -94,13 +94,15 @@ test_that("long-run multipliers and delta-method standard errors", {
   expect_equal(nrow(adl_long_run(fit, "HAC")), 3)
 })
 
-test_that("unstable models warn", {
+test_that("unstable models: NA long run, with a warning", {
   fit <- inf_fit()
   fit$lm$coefficients[["y_lag1"]] <- 1.05  # root of C(z) inside the unit circle
   expect_false(is_stable(fit))
-  expect_warning(adl_long_run(fit), "not dynamically stable")
-  fit$lm$coefficients[["y_lag1"]] <- 1
-  expect_error(suppressWarnings(adl_long_run(fit)), "C\\(1\\) is zero")
+  expect_warning(lr <- adl_long_run(fit), "do not exist")
+  expect_true(all(is.na(lr$estimate)) && all(is.na(lr$std.error)))
+  fit$lm$coefficients[["y_lag1"]] <- 1     # unit root: C(1) = 0
+  expect_warning(lr1 <- adl_long_run(fit), "do not exist")
+  expect_true(all(is.na(lr1$estimate)))
 })
 
 test_that("parameter labels follow the chapters' notation", {

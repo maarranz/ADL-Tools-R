@@ -115,7 +115,51 @@ to_zoo <- function(data, time = NULL) {
   }
   idx <- zoo::index(z)
   if (anyDuplicated(idx)) stop("The time index has duplicated values.", call. = FALSE)
+  check_regular(idx)
   z
+}
+
+#' Stop if a time index has gaps
+#'
+#' Lags are taken by row, so a missing period would make the "lag" of the
+#' next observation two periods old. Accepted: equal steps (ts, integer or
+#' daily/weekly dates), or consecutive months, quarters or years for dates
+#' and yearmon/yearqtr indexes. Irregular data are not supported.
+#' @noRd
+check_regular <- function(idx) {
+  if (length(idx) < 3) return(invisible(TRUE))
+  ok_steps <- function(v, step = NULL) {
+    d <- diff(v)
+    step <- step %||% d[1]
+    tol <- 1e-8 * max(1, abs(step))
+    all(abs(d - step) < tol)
+  }
+  regular <- if (inherits(idx, "yearqtr")) {
+    ok_steps(as.numeric(idx) * 4, 1)
+  } else if (inherits(idx, "yearmon")) {
+    ok_steps(as.numeric(idx) * 12, 1)
+  } else if (inherits(idx, c("Date", "POSIXt"))) {
+    dd <- as.Date(idx)
+    ok_steps(as.numeric(dd)) ||
+      ok_steps(round(as.numeric(zoo::as.yearmon(dd)) * 12), 1) ||
+      ok_steps(round(as.numeric(zoo::as.yearqtr(dd)) * 4), 1) ||
+      ok_steps(as.numeric(format(dd, "%Y")), 1)
+  } else if (is.numeric(idx)) {
+    ok_steps(as.numeric(idx))
+  } else {
+    TRUE
+  }
+  if (!regular) {
+    d <- diff(as.numeric(if (inherits(idx, c("Date", "POSIXt"))) as.Date(idx) else idx))
+    k <- which(abs(d - stats::median(d)) > 1e-8 * max(1, abs(stats::median(d))))[1]
+    where <- if (!is.na(k)) paste0(" (between ", format(idx[k]), " and ",
+                                   format(idx[k + 1]), ")") else ""
+    stop("The time index has gaps or is irregular", where, ". Lags are taken ",
+         "period by period, so a missing period would be skipped. Insert the ",
+         "missing periods or estimate on a stretch without gaps; irregular data ",
+         "are not supported.", call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 #' Convert tsibble index classes to their zoo equivalents

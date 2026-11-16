@@ -21,7 +21,8 @@ weak_exogeneity_test(
 
 \item{x}{The regressor tested; by default the only regressor.}
 
-\item{lags}{Number of lags \eqn{s} of \eqn{\Delta x} and \eqn{\Delta y}.}
+\item{lags}{Number of lags \eqn{s} of the changes in the marginal
+equation.}
 
 \item{strong}{Test strong exogeneity instead of weak?}
 
@@ -74,8 +75,23 @@ for stationary variables and for cointegrated I(1) ones, where
 limit. \code{x_level = FALSE} gives the regression exactly as written in ADL3,
 appropriate only for cointegrated I(1) variables.
 
-Choose \code{lags} so that \eqn{\nu_t} is free of serial correlation (the
-marginal regression is returned in \verb{$marginal} for checking).
+The marginal equation conditions on: lags of \eqn{\Delta x} and
+\eqn{\Delta y}; with several regressors, lags of the changes of the
+others (and, with \code{x_level}, their levels at \eqn{t-1}); the controls
+entered after \code{|} (at \eqn{t-1}); and the trend, if the model has one.
+Because \eqn{\widehat{ec}_{t-1}} is linear, including the controls and
+trend there is equivalent to building their long-run terms into the
+equilibrium error. With \code{x_level = TRUE}, \eqn{\kappa} is the coefficient
+of \eqn{y_{t-1}} given the regressor levels, so it does not depend on the
+estimated long-run multipliers. The strong test adds the lagged changes
+of \eqn{y} to the null, within this same conditioning set.
+
+The test needs a stable model (there is no equilibrium error otherwise)
+and an adequate marginal equation: choose \code{lags} so that \eqn{\nu_t} is
+free of serial correlation (the marginal regression is returned in
+\verb{$marginal} for checking). It addresses the part of weak exogeneity the
+data can speak to (whether \eqn{x} responds to the equilibrium error);
+variation-freeness of the parameters has to be argued from the economics.
 }
 \examples{
 fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
