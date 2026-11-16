@@ -42,8 +42,10 @@ every regressor's \eqn{q} is estimated.}
 automatically when there is a single date column.}
 
 \item{start, end}{Estimation sample, in the units of the time index (e.g.
-\code{c(1990, 1)} for quarterly \code{ts} data, or \code{"1990-01-01"} for dates). The
-first \code{max_lag} observations of this sample are used as initial values.}
+\code{c(1990, 1)} for quarterly \code{ts} data, or \code{"1990-01-01"} for dates).
+\code{start} is the first observation estimated; the lags use the
+observations before it, as in \code{dynlm} and EViews. Without \code{start}, the
+first \code{max_lag} observations of the data are the initial values.}
 }
 \value{
 A data frame of class \code{"adl_ic"} with one row per model: \code{p}, a

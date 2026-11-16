@@ -28,8 +28,10 @@
 #' @param time Name of the time column when `data` is a data frame; detected
 #'   automatically when there is a single date column.
 #' @param start,end Estimation sample, in the units of the time index (e.g.
-#'   `c(1990, 1)` for quarterly `ts` data, or `"1990-01-01"` for dates). The
-#'   first `max_lag` observations of this sample are used as initial values.
+#'   `c(1990, 1)` for quarterly `ts` data, or `"1990-01-01"` for dates).
+#'   `start` is the first observation estimated; the lags use the
+#'   observations before it, as in `dynlm` and EViews. Without `start`, the
+#'   first `max_lag` observations of the data are the initial values.
 #' @param max_lag Number of initial observations to set aside. Defaults to
 #'   the largest lag; set it larger to estimate several models on a common
 #'   sample.
@@ -64,8 +66,9 @@ adl <- function(formula, data, order = NULL, first_lag = 0, lags = NULL,
   lag_sets <- normalize_lags(spec$y, spec$x, order = order,
                              first_lag = first_lag, lags = lags)
 
+  pre <- max(c(0L, unlist(lag_sets), max_lag))
   d <- as_adl_data(data, c(spec$y, spec$x, spec$unlagged), time = time,
-                   start = start, end = end)
+                   start = start, end = end, pre = pre)
   des <- build_design(d$z, lag_sets, unlagged = spec$unlagged, trend = trend,
                       max_lag = max_lag)
 

@@ -1,3 +1,11 @@
+# adltools 0.2.0.9000
+
+* **Changed:** `start` now means the first observation of the estimation
+  sample, with the lags taken from the observations before it, as in
+  `dynlm` and EViews. In 0.1.0 and 0.2.0 the first max(lags) observations
+  after `start` were lost to the lags.
+* `as_adl()` converts an existing `dynlm` fit into an `adl` fit.
+
 # adltools 0.2.0
 
 * Residual diagnostics: `bg_test()` (Breusch-Godfrey, LM and F forms),

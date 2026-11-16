@@ -14,10 +14,14 @@
 #' @param data Input data.
 #' @param vars Character vector of variable names to keep.
 #' @param time Name of the time column for data frames; `NULL` to detect it.
-#' @param start,end Optional sample limits, in the units of the time index.
+#' @param start,end Optional limits of the estimation sample, in the units
+#'   of the time index: `start` is the first observation estimated.
+#' @param pre Number of observations kept before `start` for the initial
+#'   lags (the largest lag of the model).
 #' @return A list with `z` (zoo matrix), `index`, `n` and `trimmed`.
 #' @noRd
-as_adl_data <- function(data, vars, time = NULL, start = NULL, end = NULL) {
+as_adl_data <- function(data, vars, time = NULL, start = NULL, end = NULL,
+                        pre = 0) {
   z <- to_zoo(data, time = time)
 
   missing_vars <- setdiff(vars, colnames(z))
@@ -28,11 +32,29 @@ as_adl_data <- function(data, vars, time = NULL, start = NULL, end = NULL) {
   z <- z[, vars, drop = FALSE]
 
   if (!is.null(start) || !is.null(end)) {
+    # start/end delimit the estimation sample (as in dynlm and EViews): the
+    # `pre` observations before `start` are kept as initial lags
     idx <- zoo::index(z)
-    s <- if (is.null(start)) NULL else as_index_value(start, idx)
-    e <- if (is.null(end)) NULL else as_index_value(end, idx)
-    z <- stats::window(z, start = s, end = e)
-    if (nrow(z) == 0) stop("No observations between `start` and `end`.", call. = FALSE)
+    first <- 1L
+    last <- length(idx)
+    if (!is.null(start)) {
+      s <- as_index_value(start, idx)
+      pos <- which(idx >= s)[1]
+      if (is.na(pos)) stop("`start` is after the end of the data.", call. = FALSE)
+      first <- pos - pre
+      if (first < 1) {
+        message("Not enough observations before `start` for ", pre,
+                " lag(s); the estimation sample starts at ",
+                format(idx[min(pre + 1, length(idx))]), ".")
+        first <- 1L
+      }
+    }
+    if (!is.null(end)) {
+      e <- as_index_value(end, idx)
+      last <- max(c(0L, which(idx <= e)))
+    }
+    if (last < first) stop("No observations between `start` and `end`.", call. = FALSE)
+    z <- z[first:last, , drop = FALSE]
   }
 
   ok <- stats::complete.cases(zoo::coredata(z))

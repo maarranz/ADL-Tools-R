@@ -38,9 +38,20 @@ test_that("max_lag and start/end control the sample", {
   m <- sim_data()
   a <- adl(y ~ x1, data = m, order = c(1, 1), max_lag = 4)
   expect_equal(nobs(a), 76)
+  # start is the first estimated observation; lags come from before it
   b <- adl(y ~ x1, data = m, order = c(1, 1), start = c(2005, 1), end = c(2014, 4))
-  expect_equal(nobs(b), 39)
-  expect_equal(format(b$index[1]), "2005 Q2")
+  expect_equal(nobs(b), 40)
+  expect_equal(format(b$index[1]), "2005 Q1")
+  b3 <- adl(y ~ x1, data = m, order = c(3, 1), start = c(2005, 1), end = c(2014, 4))
+  expect_equal(b3$index, b$index)
+  skip_if_not_installed("dynlm")
+  suppressPackageStartupMessages(library(dynlm))
+  ref <- dynlm(y ~ L(y, 1:3) + L(x1, 0:1), data = m, start = c(2005, 1), end = c(2014, 4))
+  expect_equal(unname(coef(b3)), unname(coef(ref)))
+  # not enough observations before start: estimation starts as early as possible
+  expect_message(e <- adl(y ~ x1, data = m, order = c(2, 1), start = c(2000, 1)),
+                 "Not enough observations")
+  expect_equal(format(e$index[1]), "2000 Q3")
 })
 
 test_that("the same model from a data frame with a date column", {

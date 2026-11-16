@@ -95,7 +95,7 @@ adl_ic <- function(formula, data, max_order, contemporaneous = "both",
 
   m <- max(pmax, qmax)
   d <- as_adl_data(data, c(spec$y, x, spec$unlagged), time = time,
-                   start = start, end = end)
+                   start = start, end = end, pre = m)
   rows <- vector("list", nrow(grid))
   for (i in seq_len(nrow(grid))) {
     g <- grid[i, ]

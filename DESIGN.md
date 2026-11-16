@@ -280,9 +280,14 @@ For each regressor x_i:
 - **Time index for data frames/tibbles**: a time column given by `time =`, or
   detected when exactly one Date/yearmon/yearqtr column exists; otherwise row
   order, with a message.
-- **Sample**: `start`/`end` select the estimation sample; the first
-  max(lags) observations of that sample are used as initial values, so all
-  models built from the same data and lag bound share one common sample.
+- **Sample**: `start`/`end` select the estimation sample, as in `dynlm` and
+  EViews: `start` is the first observation estimated and the lags use the
+  observations before it (decided 2026-11-16; 0.1.0 and 0.2.0 used the
+  first max(lags) observations after `start` instead). Models with
+  different lags and the same `start` share one sample. Without `start`, the
+  first max(lags) (or `max_lag`) observations of the data are the initial
+  values; if there are too few observations before `start`, the sample
+  starts as early as possible, with a message.
 
 ## 13. Implementation plan
 
@@ -327,7 +332,7 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 
 ## 14. Roadmap
 
-- **v0.1.0** — specification and estimation (`adl()` from `order`/`first_lag`,
+- **v0.1.0** (released 2026-11-16) — specification and estimation (`adl()` from `order`/`first_lag`,
   explicit `lags` or its own dynlm-style formulas; several regressors;
   unlagged dummies; base and tidy inputs); inference (`adl_coefficients()`,
   `adl_joint_test()`, `adl_long_run()`); Granger (`granger_test()`,
@@ -336,13 +341,14 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
   median lag, inverse roots; point estimates); `adl_ic()` table of
   information criteria on a common sample; one vignette on Granger
   causality.
-- **v0.1.x** — accept existing `dynlm` fits.
-- **v0.2.0** — diagnostics (BG, ARCH, RESET, JB), Chow breakpoint,
+- **v0.2.0** (released 2026-11-16) — diagnostics (BG, ARCH, RESET, JB), Chow breakpoint,
   `chow_forecast_test()` (static and dynamic), `comfac_test()` (LR, and Wald
   for the ADL(1,1)).
-- **v0.2.x** — outlier detection.
-- **v0.3** — exogeneity (`wu_hausman_test()`, `weak_exogeneity_test()` with
-  strong exogeneity, `super_exogeneity_test()`), `adl_gets()` tier 1, and
+- **v0.2.x** — accept existing `dynlm` fits (`as_adl()`); workflow vignette;
+  `DESIGN.md` roadmap kept current.
+- **v0.2.x / v0.3** — outlier detection (pending the critical-value question).
+- **v0.3** — exogeneity (`wu_hausman_test()` and `weak_exogeneity_test()` with
+  strong exogeneity started in 0.2.x; `super_exogeneity_test()`), `adl_gets()` tier 1, and
   automatic lag selection in `granger_test_general()` (same engine; the
   argument exists from v0.1.0 and stops with "not yet implemented").
 - **Later** — Hansen (1992) per coefficient; J-test with the four-outcome
