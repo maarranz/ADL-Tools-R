@@ -8,6 +8,7 @@ S3method(model.matrix,adl)
 S3method(nobs,adl)
 S3method(print,adl)
 S3method(print,adltools_test)
+S3method(print,granger_test)
 S3method(print,summary.adl)
 S3method(residuals,adl)
 S3method(summary,adl)
@@ -17,6 +18,8 @@ export(adl_coefficients)
 export(adl_joint_test)
 export(adl_long_run)
 export(adl_vcov)
+export(granger_test)
+export(granger_test_general)
 importFrom(stats,
   coef,
   fitted,

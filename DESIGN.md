@@ -152,8 +152,9 @@ Follows the direct (Sargent, 1976) procedure of ADL3, not
     models. Unit test: with all orders equal to p it reproduces
     `granger_test()` exactly.
 - **Common sample** for all models.
-- **Distributions**: both F and χ² (qF) reported; `dist = c("F", "chisq")`
-  decides the classification only.
+- **Distributions**: both χ² and F reported; `dist = c("chisq", "F")`
+  decides the classification only. χ² is the default: the regressions are
+  dynamic, so the exact F does not hold even with nonrobust errors.
 - **Covariance**: `cov_type = "nonrobust"` by default (matches EViews and
   lmtest; the s = r identity holds), HAC optional. The identity is an OLS
   result; with HAC the two instantaneous statistics differ (stated in ADL3).

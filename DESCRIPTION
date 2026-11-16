@@ -25,6 +25,7 @@ Imports:
     zoo
 Suggests:
     dynlm,
+    lmtest,
     testthat (>= 3.0.0),
     tibble,
     tsibble
