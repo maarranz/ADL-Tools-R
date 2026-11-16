@@ -22,11 +22,15 @@ jobs:
         config:
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}   # previous R version
-          # oldest supported R, with the required dependencies only: the
+          # Oldest supported R, with the required dependencies only: the
           # suggested packages (dynlm -> car -> lme4 -> Matrix, ...) follow
-          # current R and no longer install there; tests that need them skip
-          - {os: ubuntu-latest,  r: '4.2', deps: '"hard"', extra: 'any::testthat',
-             build: '"--no-build-vignettes"', check: '"--ignore-vignettes"'}
+          # current R and no longer install there; tests that need them skip.
+          - os: ubuntu-latest
+            r: '4.2'
+            deps: '"hard"'
+            extra: 'any::testthat'
+            build_args: 'c("--no-manual", "--no-build-vignettes")'
+            args: 'c("--no-manual", "--as-cran", "--ignore-vignettes")'
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
 
@@ -54,5 +58,5 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
-          build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf", ${{ matrix.config.build || '"--resave-data"' }})'
-          args: 'c("--no-manual", "--as-cran", ${{ matrix.config.check || '"--timings"' }})'
+          build_args: ${{ matrix.config.build_args || 'c("--no-manual", "--compact-vignettes=gs+qpdf")' }}
+          args: ${{ matrix.config.args || 'c("--no-manual", "--as-cran")' }}
