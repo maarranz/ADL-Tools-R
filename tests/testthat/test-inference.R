@@ -102,3 +102,31 @@ test_that("unstable models warn", {
   fit$lm$coefficients[["y_lag1"]] <- 1
   expect_error(suppressWarnings(adl_long_run(fit)), "C\\(1\\) is zero")
 })
+
+test_that("parameter labels follow the chapters' notation", {
+  fit <- inf_fit()
+  tab <- adl_coefficients(fit)
+  expect_equal(tab$param, c("alpha_0", "alpha_1", "beta_1,0", "beta_1,1", "beta_1,2",
+                            "beta_2,0", "beta_2,1", "beta_2,2"))
+  set.seed(1)
+  d <- stats::ts(cbind(y = rnorm(60), x = rnorm(60), dm = rep(0:1, 30)))
+  one <- adl(y ~ x | dm, data = d, order = c(2, 1), trend = TRUE)
+  expect_equal(adl_coefficients(one)$param,
+               c("alpha_0", "alpha_1", "alpha_2", "beta_0", "beta_1", "", ""))
+})
+
+test_that("summary uses z by default and t on request", {
+  fit <- inf_fit()
+  s <- summary(fit)
+  expect_equal(s$dist, "normal")
+  expect_equal(s$coefficients$p.value, 2 * pnorm(-abs(s$coefficients$statistic)))
+  expect_equal(s$overall$distribution, "chi2")
+  out <- capture.output(print(s))
+  expect_true(any(grepl("z value", out)))
+  expect_true(any(grepl("y_lag1 \\[alpha_1\\]", out)))
+  st <- summary(fit, dist = "t")
+  expect_equal(st$coefficients$p.value, unname(summary(fit$lm)$coefficients[, 4]))
+  expect_equal(st$overall$statistic, unname(summary(fit$lm)$fstatistic[1]))
+  sh <- summary(fit, cov_type = "HAC")
+  expect_output(print(sh), "HAC \\(Bartlett")
+})

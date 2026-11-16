@@ -31,7 +31,10 @@ asymptotic approximations; \code{"t"} reproduces \code{summary.lm()} and EViews.
 }
 \value{
 A data frame with one row per coefficient: \code{term} (column name),
-\code{variable}, \code{lag}, \code{estimate}, \code{std.error}, \code{statistic}, \code{p.value},
+\code{param} (the parameter in the chapters' notation: \code{alpha_0}, \code{alpha_i},
+\code{beta_j} with one regressor, \verb{beta_i,j} with several; empty for
+unlagged terms and the trend), \code{variable}, \code{lag}, \code{role}, \code{estimate},
+\code{std.error}, \code{statistic}, \code{p.value},
 \code{conf.low}, \code{conf.high}. Attributes \code{cov_type}, \code{maxlags} and
 \code{distribution} record how it was computed.
 }

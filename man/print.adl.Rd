@@ -8,21 +8,45 @@
 \usage{
 \method{print}{adl}(x, digits = max(3L, getOption("digits") - 3L), ...)
 
-\method{summary}{adl}(object, ...)
+\method{summary}{adl}(
+  object,
+  cov_type = c("nonrobust", "HAC"),
+  maxlags = NULL,
+  dist = c("normal", "t"),
+  ...
+)
 
 \method{print}{summary.adl}(x, digits = max(3L, getOption("digits") - 3L), ...)
 }
 \arguments{
-\item{x, object}{An \code{"adl"} object.}
+\item{x, object}{An \code{"adl"} object (\code{x} is a \code{"summary.adl"} object in its
+print method).}
 
 \item{digits}{Number of significant digits.}
 
 \item{...}{Not used.}
+
+\item{cov_type}{\code{"nonrobust"} (conventional OLS, the default) or \code{"HAC"}
+(Newey-West, Bartlett kernel, no prewhitening, no small-sample
+adjustment).}
+
+\item{maxlags}{HAC bandwidth. \code{NULL} uses the automatic rule
+\eqn{\lfloor 4 (n/100)^{2/9} \rfloor}{floor(4 (n/100)^(2/9))}, capped at
+\eqn{n - 1}. Must be \code{NULL} with \code{cov_type = "nonrobust"}.}
+
+\item{dist}{\code{"normal"} (default) or \code{"t"}.}
 }
 \value{
 \code{print()} returns \code{x} invisibly; \code{summary()} returns an object of
 class \code{"summary.adl"}.
 }
 \description{
-Print and summarize an ADL fit
+\code{summary()} gives the coefficient table, with the parameter of each
+coefficient in the notation of the ATSE chapters (\eqn{\alpha_0} for the
+intercept, \eqn{\alpha_i} for lag i of the dependent variable,
+\eqn{\beta_j} for lag j of a single regressor, \eqn{\beta_{ij}} for lag
+j of regressor i), and a Wald test that all coefficients except the
+intercept are zero. As in \code{\link[=adl_coefficients]{adl_coefficients()}}, p-values use the normal
+and chi-square distributions by default; \code{dist = "t"} reproduces
+\code{summary.lm()}.
 }

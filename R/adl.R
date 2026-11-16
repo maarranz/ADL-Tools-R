@@ -103,8 +103,20 @@ adl <- function(formula, data, order = NULL, first_lag = 0, lags = NULL,
 
 #' Print and summarize an ADL fit
 #'
-#' @param x,object An `"adl"` object.
+#' `summary()` gives the coefficient table, with the parameter of each
+#' coefficient in the notation of the ATSE chapters (\eqn{\alpha_0} for the
+#' intercept, \eqn{\alpha_i} for lag i of the dependent variable,
+#' \eqn{\beta_j} for lag j of a single regressor, \eqn{\beta_{ij}} for lag
+#' j of regressor i), and a Wald test that all coefficients except the
+#' intercept are zero. As in [adl_coefficients()], p-values use the normal
+#' and chi-square distributions by default; `dist = "t"` reproduces
+#' `summary.lm()`.
+#'
+#' @param x,object An `"adl"` object (`x` is a `"summary.adl"` object in its
+#'   print method).
 #' @param digits Number of significant digits.
+#' @inheritParams adl_vcov
+#' @param dist `"normal"` (default) or `"t"`.
 #' @param ... Not used.
 #' @return `print()` returns `x` invisibly; `summary()` returns an object of
 #'   class `"summary.adl"`.
@@ -121,31 +133,55 @@ print.adl <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 
 #' @rdname print.adl
 #' @export
-summary.adl <- function(object, ...) {
+summary.adl <- function(object, cov_type = c("nonrobust", "HAC"),
+                        maxlags = NULL, dist = c("normal", "t"), ...) {
+  cov_type <- match.arg(cov_type)
+  dist <- match.arg(dist)
+  tab <- adl_coefficients(object, cov_type = cov_type, maxlags = maxlags,
+                          dist = dist)
+  slopes <- setdiff(names(stats::coef(object)), "(Intercept)")
+  overall <- if (length(slopes)) {
+    adl_joint_test(object, terms = slopes, cov_type = cov_type,
+                   maxlags = maxlags, dist = if (dist == "t") "F" else "chisq")
+  }
   s <- summary(object$lm)
-  structure(list(object = object, lm = s), class = "summary.adl")
+  structure(list(object = object, coefficients = tab, overall = overall,
+                 sigma = s$sigma, df_resid = s$df[2], r.squared = s$r.squared,
+                 adj.r.squared = s$adj.r.squared, cov_type = cov_type,
+                 maxlags = attr(tab, "maxlags"), dist = dist),
+            class = "summary.adl")
 }
 
 #' @rdname print.adl
 #' @export
 print.summary.adl <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
   o <- x$object
-  s <- x$lm
   cat(o$label, " estimated by OLS\n", sep = "")
   cat("Dependent variable: ", o$y, "\n", sep = "")
   cat("Sample: ", sample_text(o), "\n", sep = "")
-  cat("dynlm equivalent: ", o$dynlm, "\n\n", sep = "")
-  stats::printCoefmat(s$coefficients, digits = digits, signif.legend = TRUE)
-  cat("\nResidual standard error: ", format(s$sigma, digits = digits),
-      " on ", s$df[2], " degrees of freedom\n", sep = "")
-  cat("R-squared: ", formatC(s$r.squared, digits = digits),
-      ",  Adjusted R-squared: ", formatC(s$adj.r.squared, digits = digits), "\n",
+  cat("dynlm equivalent: ", o$dynlm, "\n", sep = "")
+  cov <- if (x$cov_type == "HAC") paste0("HAC (Bartlett, ", x$maxlags, " lags)")
+         else "conventional OLS"
+  cat("Covariance: ", cov, "\n\n", sep = "")
+  tab <- x$coefficients
+  m <- cbind(tab$estimate, tab$std.error, tab$statistic, tab$p.value)
+  zt <- if (x$dist == "t") "t" else "z"
+  colnames(m) <- c("Estimate", "Std. Error", paste(zt, "value"),
+                   paste0("Pr(>|", zt, "|)"))
+  rownames(m) <- ifelse(tab$param == "", tab$term,
+                        paste0(tab$term, " [", tab$param, "]"))
+  stats::printCoefmat(m, digits = digits, signif.legend = TRUE)
+  cat("\nResidual standard error: ", format(x$sigma, digits = digits),
+      " on ", x$df_resid, " degrees of freedom\n", sep = "")
+  cat("R-squared: ", formatC(x$r.squared, digits = digits),
+      ",  Adjusted R-squared: ", formatC(x$adj.r.squared, digits = digits), "\n",
       sep = "")
-  if (!is.null(s$fstatistic)) {
-    f <- s$fstatistic
-    p <- stats::pf(f[1], f[2], f[3], lower.tail = FALSE)
-    cat("F-statistic: ", formatC(f[1], digits = digits), " on ", f[2], " and ",
-        f[3], " DF,  p-value: ", format.pval(p, digits = digits), "\n", sep = "")
+  if (!is.null(x$overall)) {
+    w <- x$overall
+    lab <- if (w$distribution == "F") paste0("F(", w$df_num, ", ", w$df_denom, ")")
+           else paste0("Chi-square(", w$df, ")")
+    cat("Wald test, all slopes zero: ", lab, " = ", format(signif(w$statistic, digits)),
+        ",  p-value: ", format.pval(w$p.value, digits = digits), "\n", sep = "")
   }
   invisible(x)
 }

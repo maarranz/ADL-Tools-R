@@ -5,6 +5,13 @@
   `|`; data as ts, zoo/xts, data frame, tibble or tsibble.
 * `adl_vcov()`: conventional or Newey-West HAC covariance, with the
   forecastingtools conventions.
+* `adl_ic()`: AIC, BIC and Hannan-Quinn (EViews per-observation form) over
+  a grid of lag orders on a common sample, with and without the
+  contemporaneous regressors (`contemporaneous = "both"` by default).
+* `summary()` of a fit shows z p-values by default (`dist = "t"` for the
+  `summary.lm()` values), takes `cov_type` for HAC standard errors, and ends
+  with a Wald test that all slopes are zero. Coefficient tables label each
+  parameter in the chapters' notation (`alpha_1`, `beta_0`, `beta_2,1`, ...).
 * `adl_dynamics()`: dynamic and cumulative multipliers (also as a percentage
   of the long run), mean and median lag, and the inverse roots of C(L), with
   `print()` and `plot()` methods. Same definitions as adl-theory.

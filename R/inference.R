@@ -14,7 +14,10 @@
 #'   p-values and intervals. The regression is dynamic, so both are
 #'   asymptotic approximations; `"t"` reproduces `summary.lm()` and EViews.
 #' @return A data frame with one row per coefficient: `term` (column name),
-#'   `variable`, `lag`, `estimate`, `std.error`, `statistic`, `p.value`,
+#'   `param` (the parameter in the chapters' notation: `alpha_0`, `alpha_i`,
+#'   `beta_j` with one regressor, `beta_i,j` with several; empty for
+#'   unlagged terms and the trend), `variable`, `lag`, `role`, `estimate`,
+#'   `std.error`, `statistic`, `p.value`,
 #'   `conf.low`, `conf.high`. Attributes `cov_type`, `maxlags` and
 #'   `distribution` record how it was computed.
 #' @examples
@@ -37,7 +40,7 @@ adl_coefficients <- function(fit, cov_type = c("nonrobust", "HAC"),
   se <- sqrt(diag(V))
   tab <- coef_table(names(b), b, se, dist, df_resid(fit), alpha)
   info <- term_info(fit, names(b))
-  tab <- cbind(tab[1], info, tab[-1])
+  tab <- cbind(tab[1], param = param_labels(fit, info), info, tab[-1])
   structure(tab, cov_type = cov_type, maxlags = attr(V, "maxlags"),
             distribution = dist)
 }
@@ -233,6 +236,20 @@ term_info <- function(fit, terms) {
                   fit$terms$role[m]),
     stringsAsFactors = FALSE
   )
+}
+
+#' Parameter labels in the notation of the chapters
+#' @noRd
+param_labels <- function(fit, info) {
+  several <- length(fit$x) > 1
+  vapply(seq_len(nrow(info)), function(k) {
+    switch(info$role[k],
+      intercept = "alpha_0",
+      ar = paste0("alpha_", info$lag[k]),
+      dl = if (several) paste0("beta_", match(info$variable[k], fit$x), ",", info$lag[k])
+           else paste0("beta_", info$lag[k]),
+      "")
+  }, "")
 }
 
 #' Expand variable names to their coefficient columns
