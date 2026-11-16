@@ -1,5 +1,10 @@
-# adltools (development version)
+# adltools 0.0.0.9000
 
+* `tidy()` and `glance()` methods for fits, tests, Granger results and
+  dynamic effects (generics from the `generics` package).
+* `adl_sim`: simulated quarterly data with a known causal structure.
+* Vignette `granger`: Granger non-causality step by step.
+* tsibble input: quarterly and monthly indexes are converted to zoo classes.
 * `adl()` estimates ADL models by OLS from `order` + `first_lag`, an explicit
   `lags` list or a dynlm-style formula with `L()` terms; unlagged terms after
   `|`; data as ts, zoo/xts, data frame, tibble or tsibble.

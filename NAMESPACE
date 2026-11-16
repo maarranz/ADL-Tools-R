@@ -3,6 +3,9 @@
 S3method(coef,adl)
 S3method(fitted,adl)
 S3method(formula,adl)
+S3method(glance,adl)
+S3method(glance,adl_dynamics)
+S3method(glance,granger_test)
 S3method(logLik,adl)
 S3method(model.matrix,adl)
 S3method(nobs,adl)
@@ -15,6 +18,10 @@ S3method(print,granger_test)
 S3method(print,summary.adl)
 S3method(residuals,adl)
 S3method(summary,adl)
+S3method(tidy,adl)
+S3method(tidy,adl_dynamics)
+S3method(tidy,adltools_test)
+S3method(tidy,granger_test)
 S3method(vcov,adl)
 export(adl)
 export(adl_coefficients)
@@ -23,8 +30,14 @@ export(adl_ic)
 export(adl_joint_test)
 export(adl_long_run)
 export(adl_vcov)
+export(glance)
 export(granger_test)
 export(granger_test_general)
+export(tidy)
+importFrom(generics,
+  glance,
+  tidy
+)
 importFrom(stats,
   coef,
   fitted,

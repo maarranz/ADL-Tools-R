@@ -96,6 +96,18 @@ to_zoo <- function(data, time = NULL) {
   z
 }
 
+#' Convert tsibble index classes to their zoo equivalents
+#'
+#' `yearquarter` -> `yearqtr`, `yearmonth` -> `yearmon`, `yearweek` -> `Date`
+#' (first day of the week). Other classes are left as they are.
+#' @noRd
+standard_index <- function(idx) {
+  if (inherits(idx, "yearquarter")) return(zoo::as.yearqtr(as.Date(idx)))
+  if (inherits(idx, "yearmonth")) return(zoo::as.yearmon(as.Date(idx)))
+  if (inherits(idx, "yearweek")) return(as.Date(idx))
+  idx
+}
+
 #' Translate a user sample limit to the class of the index
 #'
 #' Accepts ts-style `c(year, period)` for yearqtr, yearmon and numeric
@@ -143,7 +155,7 @@ df_to_zoo <- function(df, time = NULL) {
     if (!time %in% names(df)) {
       stop("Time column '", time, "' not found in the data.", call. = FALSE)
     }
-    idx <- df[[time]]
+    idx <- standard_index(df[[time]])
     vals <- df[setdiff(names(df), time)]
   }
 

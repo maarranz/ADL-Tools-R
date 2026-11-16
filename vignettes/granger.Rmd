@@ -1,0 +1,161 @@
+---
+title: "Granger non-causality with adltools"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Granger non-causality with adltools}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+options(width = 100)
+```
+
+This vignette shows how to test Granger non-causality between two
+stationary series with the direct procedure of Sargent (1976), as presented
+in the ADL chapters of *Applied Time Series Econometrics* (ATSE), and how to
+read the eight possible causal relations.
+
+```{r}
+library(adltools)
+```
+
+## The data
+
+`adl_sim` holds three simulated quarterly series, 1990 Q1 to 2019 Q4. The
+data-generating process is known (see `?adl_sim`): $x$ causes $y$, both
+with a lag and within the quarter, while $y$ does not cause $x$; $w$ is
+unrelated to both.
+
+```{r, fig.width = 7, fig.height = 4}
+plot(adl_sim, main = "adl_sim")
+```
+
+The procedure assumes stationary series. These are stationary by
+construction; with real data, test for unit roots first.
+
+## The direct procedure
+
+Four regressions are estimated on a **common sample**:
+
+1. $y_t$ on its own lags and lags $1, \dots, r$ of $x$, **without $x_t$**.
+   $H_0$: the lags of $x$ are jointly zero ($x$ does not Granger-cause $y$).
+2. The same with the roles of $x$ and $y$ exchanged ($y$ does not cause $x$).
+3. Model 1 plus $x_t$. $H_0$: the coefficient of $x_t$ is zero (no
+   instantaneous causality).
+4. Model 2 plus $y_t$. Same hypothesis, from the other equation.
+
+Models 1 and 2 deliberately leave out the contemporaneous term: including
+$x_t$ would mix simple and instantaneous causality.
+
+## Choosing the lag orders
+
+The test results depend on the number of lags. `adl_ic()` compares
+information criteria over a grid of orders on a common sample. For the
+Granger regression of $y$ the contemporaneous term is excluded:
+
+```{r}
+adl_ic(y ~ x, data = adl_sim, max_order = c(4, 4), contemporaneous = "exclude")
+```
+
+and for the equation of $x$:
+
+```{r}
+print(adl_ic(x ~ y, data = adl_sim, max_order = c(4, 4),
+             contemporaneous = "exclude"), n = 5)
+```
+
+The criteria point to short lags. We use $p = 2$ in all four models.
+
+## Testing
+
+```{r}
+g <- granger_test("y", "x", p = 2, data = adl_sim)
+g
+```
+
+The first test rejects that $x$ does not cause $y$; the second does not
+reject that $y$ does not cause $x$; both instantaneous tests reject. The
+relation is of type 5, $x \Rightarrow y$: $x$ causes $y$, with instantaneous
+causality, as in the data-generating process.
+
+By default the decisions use the chi-square (Wald) statistic: the
+regressions are dynamic, so the exact F distribution does not apply even
+with classical errors. The F form, the one EViews and `lmtest::grangertest()`
+report, is in the same table, and `dist = "F"` makes it decide.
+
+With the same order in every model and the conventional covariance, the two
+instantaneous statistics are identical: both are functions of the same
+partial correlation. This no longer holds with HAC standard errors:
+
+```{r}
+granger_test("y", "x", p = 2, data = adl_sim, cov_type = "HAC")
+```
+
+## Different orders in each model
+
+`granger_test_general()` lets every model have its own orders
+$(s, r)$: $s$ lags of the dependent variable and $r$ lags of the other.
+The instantaneous models take the orders of the Granger models unless
+`inst_orders` says otherwise.
+
+```{r}
+granger_test_general("y", "x", data = adl_sim,
+                     orders = list(y = c(1, 2), x = c(1, 1)))
+```
+
+With unequal orders the two instantaneous tests can disagree. The result is
+then flagged as ambiguous and both candidate types are shown.
+
+## An unrelated pair
+
+```{r}
+granger_test("y", "w", p = 2, data = adl_sim)
+```
+
+Nothing is rejected: type 1, $y$ and $w$ independent.
+
+## Using the results
+
+Every element can be extracted, and `tidy()` and `glance()` return data
+frames:
+
+```{r}
+tidy(g)[, c("model", "null_hypothesis", "chisq", "p.value_chisq", "reject_null")]
+glance(g)
+```
+
+The four fitted models are in `g$models`, as ordinary `adl()` fits:
+
+```{r}
+summary(g$models$inst_y)
+```
+
+## Caveats
+
+- The tests condition on the information in $y$ and $x$ alone. A third
+  variable that drives both can create apparent causality.
+- Results can change with the number of lags; check a few orders.
+- With serial correlation or heteroskedasticity in the residuals, use
+  `cov_type = "HAC"`.
+
+## Beyond causality
+
+Once $x$ is known to cause $y$, the ADL model of $y$ given $x$ describes
+the dynamic effects:
+
+```{r, fig.width = 7, fig.height = 4}
+fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
+dyn <- adl_dynamics(fit)
+dyn
+plot(dyn, type = "cumulative")
+```
+
+## References
+
+Granger, C. W. J. (1969). Investigating causal relations by econometric
+models and cross-spectral methods. *Econometrica*, 37(3), 424-438.
+
+Sargent, T. J. (1976). A classical macroeconometric model for the United
+States. *Journal of Political Economy*, 84(2), 207-237.

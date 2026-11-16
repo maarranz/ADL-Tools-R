@@ -18,18 +18,23 @@ License: MIT + file LICENSE
 URL: https://github.com/maarranz/ADL-Tools-R
 BugReports: https://github.com/maarranz/ADL-Tools-R/issues
 Encoding: UTF-8
+LazyData: true
 Depends: R (>= 4.1)
 Imports:
+    generics,
     graphics,
     sandwich,
     stats,
     zoo
 Suggests:
     dynlm,
+    knitr,
     lmtest,
+    rmarkdown,
     testthat (>= 3.0.0),
     tibble,
     tsibble
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.1.1

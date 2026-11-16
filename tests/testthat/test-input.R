@@ -62,3 +62,16 @@ test_that("bad inputs give clear errors", {
   expect_error(as_adl_data(list(1, 2), "y"), "Unsupported")
   expect_error(as_adl_data(m[, "y"], "y"), "single unnamed series")
 })
+
+test_that("tsibble input gives the same data", {
+  skip_if_not_installed("tsibble")
+  m <- make_ts()
+  tb <- tsibble::as_tsibble(m, pivot_longer = FALSE)
+  r <- as_adl_data(tb, c("y", "x"))
+  expect_equal(unname(zoo::coredata(r$z)), unname(zoo::coredata(as_adl_data(m, c("y", "x"))$z)))
+  expect_equal(r$n, 40)
+  expect_s3_class(r$index, "yearqtr")
+  expect_equal(format(r$index[1]), "2000 Q1")
+  keyed <- tsibble::as_tsibble(m)  # long form, one key
+  expect_error(as_adl_data(keyed, "value"), "key variables")
+})
