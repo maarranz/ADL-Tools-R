@@ -7,8 +7,20 @@ S3method(logLik,adl)
 S3method(model.matrix,adl)
 S3method(nobs,adl)
 S3method(print,adl)
+S3method(print,adltools_test)
 S3method(print,summary.adl)
 S3method(residuals,adl)
 S3method(summary,adl)
 S3method(vcov,adl)
 export(adl)
+export(adl_vcov)
+importFrom(stats,
+  coef,
+  fitted,
+  formula,
+  logLik,
+  model.matrix,
+  nobs,
+  residuals,
+  vcov
+)

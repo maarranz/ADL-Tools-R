@@ -11,3 +11,8 @@
 #'
 #' @keywords internal
 "_PACKAGE"
+
+## Generics for the methods in adl.R
+#' @importFrom stats coef vcov residuals fitted nobs logLik model.matrix formula
+NULL
+
