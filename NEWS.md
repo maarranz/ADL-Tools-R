@@ -4,6 +4,12 @@
   sample, with the lags taken from the observations before it, as in
   `dynlm` and EViews. In 0.1.0 and 0.2.0 the first max(lags) observations
   after `start` were lost to the lags.
+* Exogeneity (ADL3): `wu_hausman_test()` (control-function test of
+  predeterminedness, instruments from further lags, weak-instrument warning)
+  and `weak_exogeneity_test()` (kappa = 0 in the regression for the change
+  in x; `strong = TRUE` adds the Granger part). The regression includes
+  x_{t-1} by default: without it the test is badly oversized for stationary
+  variables (`x_level = FALSE` gives the ADL3 regression as written).
 * `as_adl()` converts an existing `dynlm` fit into an `adl` fit.
 
 # adltools 0.2.0

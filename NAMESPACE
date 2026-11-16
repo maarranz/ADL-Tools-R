@@ -44,6 +44,8 @@ export(granger_test_general)
 export(jb_test)
 export(reset_test)
 export(tidy)
+export(weak_exogeneity_test)
+export(wu_hausman_test)
 importFrom(generics,
   glance,
   tidy
