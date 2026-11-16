@@ -13,6 +13,9 @@ S3method(residuals,adl)
 S3method(summary,adl)
 S3method(vcov,adl)
 export(adl)
+export(adl_coefficients)
+export(adl_joint_test)
+export(adl_long_run)
 export(adl_vcov)
 importFrom(stats,
   coef,
