@@ -79,7 +79,7 @@ remotes::install_github("maarranz/ADL-Tools-R", build_vignettes = TRUE)
 library(adltools)
 ```
 
-Requires R ≥ 4.1.
+Requires R ≥ 4.2.
 
 ## Author
 

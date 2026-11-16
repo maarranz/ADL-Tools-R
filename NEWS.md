@@ -20,7 +20,9 @@ Fixes from the external audit of 2026-11-16 (medium priority):
   "instantaneous causality" is a conditional contemporaneous association;
   long-run multipliers do not establish cointegration; the README states
   the package's scope.
-* CI also checks R 4.1, the oldest version in `DESCRIPTION`.
+* Requires R >= 4.2 (was 4.1): the suggested packages used by the tests
+  (`dynlm` through `car` and `pbkrtest`) no longer install on R 4.1. CI
+  checks R 4.2, the oldest supported version.
 
 Fixes from the external audit of 2026-11-16 (high priority):
 
