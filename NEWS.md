@@ -7,6 +7,9 @@
 * Stability: `chow_break_test()` (interaction form, HAC possible) and
   `chow_forecast_test()`, static (1-step, exact Omega with parameter
   uncertainty) or dynamic (N-step path, Omega from the psi-weights).
+* `comfac_test()`: common factor restrictions of any order r (r * n
+  restrictions), LR by concentrated least squares on the same sample; Wald
+  form alpha_1 beta_0 + beta_1 = 0 for the ADL(1,1), as in ADL2.
 
 # adltools 0.1.0
 

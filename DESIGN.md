@@ -178,9 +178,13 @@ Follows the direct (Sargent, 1976) procedure of ADL3, not
 - **r · n restrictions** (n regressors); requires p ≥ r and q_i ≥ r.
 - `comfac_test(fit, r = 1, method = c("LR", "Wald"))`:
   - **LR (default)**: unrestricted ADL by OLS against the restricted model
-    with AR(r) errors by conditional least squares (`stats::arima(...,
-    method = "CSS")`), same sample; LR = T log(RSS_r / RSS_u) ~ χ²(r·n).
-    Invariant, handles complex roots.
+    with AR(r) errors, fitted by least squares on the same design matrix
+    (same sample, no start-up difference); LR = T log(RSS_r / RSS_u) ~
+    χ²(r·n). Given ω the restricted model is linear in (c, φ, δ) after
+    filtering y and x by ω(L), so the RSS is concentrated on ω and
+    minimized by a grid over the stationary region plus local refinement
+    (checked against full NLS from random starts). Invariant, handles
+    complex roots.
   - **Wald**: for the ADL(1,1), the ADL2 formula α₁β₀ + β₁ = 0, so students
     can reproduce the chapter. General Wald later, in Sargan's determinantal
     form (no choice of root; comparable with PcGive).
