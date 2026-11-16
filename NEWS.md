@@ -5,6 +5,9 @@
   `|`; data as ts, zoo/xts, data frame, tibble or tsibble.
 * `adl_vcov()`: conventional or Newey-West HAC covariance, with the
   forecastingtools conventions.
+* `adl_dynamics()`: dynamic and cumulative multipliers (also as a percentage
+  of the long run), mean and median lag, and the inverse roots of C(L), with
+  `print()` and `plot()` methods. Same definitions as adl-theory.
 * Inference uses the asymptotic normal and chi-square distributions by
   default, with either covariance; `dist = "t"` or `"F"` gives the
   EViews/`summary.lm()` versions.

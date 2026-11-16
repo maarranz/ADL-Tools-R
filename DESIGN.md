@@ -328,7 +328,10 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
   unlagged dummies; base and tidy inputs); inference (`adl_coefficients()`,
   `adl_joint_test()`, `adl_long_run()`); Granger (`granger_test()`,
   `granger_test_general()` with user-supplied orders only); `tidy()`/
-  `glance()`; one vignette on Granger causality.
+  `glance()`; dynamic effects (`adl_dynamics()`: multipliers, mean and
+  median lag, inverse roots; point estimates); `adl_ic()` table of
+  information criteria on a common sample; one vignette on Granger
+  causality.
 - **v0.1.x** — accept existing `dynlm` fits.
 - **v0.2.0** — diagnostics (BG, ARCH, RESET, JB), Chow breakpoint,
   `chow_forecast_test()` (static and dynamic), `comfac_test()` (LR, and Wald
@@ -339,7 +342,7 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
   automatic lag selection in `granger_test_general()` (same engine; the
   argument exists from v0.1.0 and stops with "not yet implemented").
 - **Later** — Hansen (1992) per coefficient; J-test with the four-outcome
-  reading; dynamic multipliers, mean and median lag, inverse roots; ECM view;
+  reading; standard errors for dynamic multipliers and lags; ECM view;
   dynamic forecasts with ψ-weight variance and fan charts; Sargan's general
   COMFAC Wald; `gets` adapter (tier 2); Granger with conditioning variables.
 - **Elsewhere** — forecastingtools: `static_forecast()` for ADL fits and the
