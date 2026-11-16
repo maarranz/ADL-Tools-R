@@ -112,7 +112,7 @@ as_index_value <- function(v, idx) {
   }
   if (inherits(idx, "Date")) return(as.Date(v))
   if (is.numeric(idx) && is.numeric(v) && length(v) == 2) {
-    freq <- zoo::frequency(zoo::zoo(seq_along(idx), idx))
+    freq <- stats::frequency(zoo::zoo(seq_along(idx), idx))
     return(v[1] + (v[2] - 1) / freq)
   }
   if (length(v) != 1) stop("`start`/`end` must be a single value for this index.", call. = FALSE)
