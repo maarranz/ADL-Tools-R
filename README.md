@@ -4,19 +4,50 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: under development.** The package skeleton is in place; no functions are available yet. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.1.0.** Formulation, estimation, inference, dynamic effects and Granger non-causality. Diagnostics, stability tests and the generalized COMFAC test come in 0.2.0. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 
 `adltools` brings together, under one consistent interface, the tools needed to formulate, estimate and test ADL models as they are taught in the ATSE chapters on dynamic regression (ADL I–IV). Several of these tests are scattered across R packages, and some are not available elsewhere in the form used in the course.
 
-The first version (0.1) will cover:
+| Task | Functions |
+|:--|:--|
+| Formulation and estimation | `adl()`: lag orders with `order` and `first_lag`, explicit lag sets, or `dynlm`-style formulas; several regressors; unlagged dummies after `\|`; `ts`, `zoo`/`xts`, data frames, tibbles and tsibbles |
+| Inference | `summary()`, `adl_coefficients()` (parameters in the chapters' α/β notation), `adl_joint_test()`, `adl_long_run()`; conventional or Newey–West (HAC) covariance |
+| Dynamic effects | `adl_dynamics()`: dynamic and cumulative multipliers, mean and median lag, inverse roots |
+| Lag orders | `adl_ic()`: AIC, BIC and Hannan–Quinn on a common sample, with and without the contemporaneous regressor |
+| Granger non-causality | `granger_test()`, `granger_test_general()`: Sargent's direct procedure and the eight causal types |
+| Output | `print()`, `plot()`, `tidy()`, `glance()` |
 
-- **Formulation and estimation**: models written either with `dynlm`-style formulas (`y ~ L(y, 1) + L(x, 0:1)`) or with lag orders (`adl(y ~ x, data, order = c(1, 1))`), including the dead-start model and unlagged regressors such as outlier dummies.
-- **Inference**: coefficient tables in the chapters' α/β notation, joint Wald tests and the long-run multiplier with delta-method standard errors, with conventional or Newey–West (HAC) covariance.
-- **Granger non-causality**: the direct (Sargent) procedure of the chapters, with separate tests for simple causality in each direction and for instantaneous causality, and the classification of the relation into one of the eight causal types.
+Inference uses the asymptotic normal and chi-square distributions by default: the regressions are dynamic, so exact t and F results do not apply. `dist = "t"` or `dist = "F"` reproduces the figures of EViews and `summary.lm()`.
 
-Later versions will add diagnostic and stability tests, outlier detection, dynamic effects and dynamic forecasting (see `DESIGN.md`).
+## Example
+
+```r
+library(adltools)
+
+# Three ways to write the same ADL(1, 1)
+fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
+fit <- adl(y ~ x, data = adl_sim, lags = list(y = 1, x = 0:1))
+fit <- adl(y ~ L(y, 1) + L(x, 0:1), data = adl_sim)
+
+summary(fit)                         # alpha/beta labels, z p-values
+summary(fit, cov_type = "HAC")       # Newey-West standard errors
+adl_long_run(fit)                    # long-run multiplier, delta method
+adl_dynamics(fit)                    # multipliers, mean and median lag
+adl_joint_test(fit, variables = "x") # Wald test: all lags of x are zero
+
+# The dead-start model: x enters from lag 1
+adl(y ~ x, data = adl_sim, order = c(1, 1), first_lag = 1)
+
+# Choosing lag orders on a common sample
+adl_ic(y ~ x, data = adl_sim, max_order = c(4, 4))
+
+# Granger non-causality, both directions and instantaneous
+granger_test("y", "x", p = 2, data = adl_sim)
+```
+
+The vignette walks through the Granger procedure: `vignette("granger", package = "adltools")`.
 
 ## Related packages
 
@@ -31,11 +62,9 @@ Later versions will add diagnostic and stability tests, outlier detection, dynam
 
 ## Installation
 
-Once the first version is released:
-
 ```r
 # install.packages("remotes")
-remotes::install_github("maarranz/ADL-Tools-R")
+remotes::install_github("maarranz/ADL-Tools-R", build_vignettes = TRUE)
 library(adltools)
 ```
 

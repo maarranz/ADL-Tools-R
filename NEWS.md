@@ -1,4 +1,4 @@
-# adltools 0.0.0.9000
+# adltools 0.1.0
 
 * `tidy()` and `glance()` methods for fits, tests, Granger results and
   dynamic effects (generics from the `generics` package).
