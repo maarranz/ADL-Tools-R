@@ -132,6 +132,10 @@ be significant because of the bias. The choice is the user's, as in ADL3.
 - `adl_long_run(fit)`: k₀ and k_i for every regressor, with delta-method
   standard errors.
 - All take `cov_type = c("nonrobust", "HAC")` and `maxlags`.
+- Asymptotic distributions by default (normal, χ²), with either
+  covariance: the regressions are dynamic, so exact t and F do not hold.
+  `dist = "t"` / `"F"` gives the EViews/`summary.lm()` figures. Differs from
+  forecastingtools, where nonrobust means t/F.
 
 ## 5. Granger non-causality (ADL3)
 

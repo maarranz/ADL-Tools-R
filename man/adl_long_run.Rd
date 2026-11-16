@@ -8,7 +8,8 @@ adl_long_run(
   fit,
   cov_type = c("nonrobust", "HAC"),
   maxlags = NULL,
-  alpha = 0.05
+  alpha = 0.05,
+  dist = c("normal", "t")
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ adjustment).}
 \eqn{n - 1}. Must be \code{NULL} with \code{cov_type = "nonrobust"}.}
 
 \item{alpha}{Significance level for the confidence intervals.}
+
+\item{dist}{\code{"normal"} (default) or \code{"t"}. The delta method is asymptotic
+in any case.}
 }
 \value{
 A data frame with \code{term}, \code{estimate}, \code{std.error}, \code{statistic}

@@ -5,6 +5,9 @@
   `|`; data as ts, zoo/xts, data frame, tibble or tsibble.
 * `adl_vcov()`: conventional or Newey-West HAC covariance, with the
   forecastingtools conventions.
+* Inference uses the asymptotic normal and chi-square distributions by
+  default, with either covariance; `dist = "t"` or `"F"` gives the
+  EViews/`summary.lm()` versions.
 * `granger_test()` and `granger_test_general()`: Granger non-causality
   tests by Sargent's direct procedure (four models on a common sample,
   chi-square and F statistics) and the eight-way classification of causal

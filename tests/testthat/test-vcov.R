@@ -45,10 +45,11 @@ test_that("maxlags is validated", {
 })
 
 test_that("test results print in the suite format", {
-  w <- wald_inference(6, 2, 50, "nonrobust")
+  w <- wald_inference(6, 2, 50, "F")
   expect_equal(w$statistic, 3)
   expect_equal(w$p.value, stats::pf(3, 2, 50, lower.tail = FALSE))
-  expect_equal(wald_inference(6, 2, 50, "HAC")$distribution, "chi2")
+  expect_equal(wald_inference(6, 2, 50)$distribution, "chi2")
+  expect_equal(wald_inference(6, 2, 50)$statistic, 6)
 
   r <- new_adl_test(c(list(method = "demo", null_hypothesis = "b = 0", alpha = 0.05,
                            reject_null = w$p.value < 0.05, nobs = 52,

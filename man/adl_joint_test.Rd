@@ -13,7 +13,7 @@ adl_joint_test(
   cov_type = c("nonrobust", "HAC"),
   maxlags = NULL,
   alpha = 0.05,
-  dist = NULL
+  dist = c("chisq", "F")
 )
 }
 \arguments{
@@ -37,8 +37,9 @@ adjustment).}
 
 \item{alpha}{Significance level for the decision.}
 
-\item{dist}{\code{"F"} or \code{"chi2"}; by default F with the conventional
-covariance and chi-square with HAC.}
+\item{dist}{\code{"chisq"} (default) or \code{"F"}. The regression is dynamic, so
+both are asymptotic approximations; \code{"F"} (the Wald statistic divided
+by the number of restrictions) reproduces EViews and \code{anova()}.}
 }
 \value{
 An object of class \code{"adltools_test"}.

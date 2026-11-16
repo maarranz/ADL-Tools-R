@@ -8,7 +8,7 @@ inf_fit <- function(order = c(1, 2), n = 150, ...) {
 
 test_that("coefficient table matches summary.lm and sandwich", {
   fit <- inf_fit()
-  tab <- adl_coefficients(fit)
+  tab <- adl_coefficients(fit, dist = "t")
   s <- summary(fit$lm)$coefficients
   expect_equal(tab$estimate, unname(s[, 1]))
   expect_equal(tab$std.error, unname(s[, 2]))
@@ -18,6 +18,9 @@ test_that("coefficient table matches summary.lm and sandwich", {
   ci <- stats::confint(fit$lm)
   expect_equal(tab$conf.low, unname(ci[, 1]))
 
+  n <- adl_coefficients(fit)
+  expect_equal(attr(n, "distribution"), "normal")
+  expect_equal(n$p.value, 2 * pnorm(-abs(n$statistic)))
   h <- adl_coefficients(fit, "HAC")
   V <- adl_vcov(fit, "HAC")
   expect_equal(h$std.error, unname(sqrt(diag(V))))
@@ -27,7 +30,7 @@ test_that("coefficient table matches summary.lm and sandwich", {
 
 test_that("joint Wald test equals the restricted-vs-unrestricted F test", {
   fit <- inf_fit()
-  t1 <- adl_joint_test(fit, terms = c("x_lag1", "x_lag2"))
+  t1 <- adl_joint_test(fit, terms = c("x_lag1", "x_lag2"), dist = "F")
   restricted <- stats::lm(y ~ y_lag1 + x + z + z_lag1 + z_lag2, data = fit$lm$model)
   a <- stats::anova(restricted, fit$lm)
   expect_equal(t1$statistic, a$F[2])
@@ -37,11 +40,12 @@ test_that("joint Wald test equals the restricted-vs-unrestricted F test", {
 
   t2 <- adl_joint_test(fit, variables = "x")
   expect_equal(t2$n_restrictions, 3)
+  expect_equal(t2$distribution, "chi2")
   t3 <- adl_joint_test(fit, variables = "x", cov_type = "HAC")
   expect_equal(t3$distribution, "chi2")
   expect_equal(t3$df, 3)
-  expect_equal(adl_joint_test(fit, variables = "x", dist = "chi2")$statistic,
-               3 * t2$statistic)
+  expect_equal(adl_joint_test(fit, variables = "x", dist = "F")$statistic,
+               t2$statistic / 3)
 })
 
 test_that("joint test with R and r", {

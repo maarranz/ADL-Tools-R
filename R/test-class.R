@@ -20,13 +20,11 @@ new_adl_test <- function(x, title) {
 
 #' p-value and degrees of freedom for a Wald statistic
 #'
-#' Nonrobust inference uses the exact small-sample distributions (t, F);
-#' HAC inference uses the asymptotic ones (normal, chi-square), as in
-#' forecastingtools. `dist` overrides the choice.
+#' `dist = "chisq"` uses the Wald statistic with a chi-square(q) reference;
+#' `dist = "F"` divides it by q and uses F(q, df_resid).
 #' @param w Wald statistic (chi-square form) for `q` restrictions.
 #' @noRd
-wald_inference <- function(w, q, df_resid, cov_type, dist = NULL) {
-  dist <- dist %||% if (cov_type == "nonrobust") "F" else "chi2"
+wald_inference <- function(w, q, df_resid, dist = "chisq") {
   if (dist == "F") {
     stat <- w / q
     list(statistic = stat, distribution = "F", df_num = q, df_denom = df_resid,

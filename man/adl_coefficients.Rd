@@ -8,7 +8,8 @@ adl_coefficients(
   fit,
   cov_type = c("nonrobust", "HAC"),
   maxlags = NULL,
-  alpha = 0.05
+  alpha = 0.05,
+  dist = c("normal", "t")
 )
 }
 \arguments{
@@ -23,6 +24,10 @@ adjustment).}
 \eqn{n - 1}. Must be \code{NULL} with \code{cov_type = "nonrobust"}.}
 
 \item{alpha}{Significance level for the confidence intervals.}
+
+\item{dist}{\code{"normal"} (default) or \code{"t"}: the reference distribution for
+p-values and intervals. The regression is dynamic, so both are
+asymptotic approximations; \code{"t"} reproduces \code{summary.lm()} and EViews.}
 }
 \value{
 A data frame with one row per coefficient: \code{term} (column name),

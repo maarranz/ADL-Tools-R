@@ -1,14 +1,18 @@
 # Inference on ADL coefficients ---------------------------------------------
 #
-# Distributions follow the suite convention: with the conventional OLS
-# covariance (the default) t and F with the residual degrees of freedom; with
-# HAC the asymptotic normal and chi-square.
+# Distributions: the asymptotic normal and chi-square by default, with either
+# covariance. In a dynamic regression the exact t and F results do not hold
+# even with nonrobust errors; `dist` gives the t/F versions on request (the
+# figures EViews and summary.lm() report).
 
 #' Coefficient table with conventional or HAC standard errors
 #'
 #' @param fit An `"adl"` object.
 #' @inheritParams adl_vcov
 #' @param alpha Significance level for the confidence intervals.
+#' @param dist `"normal"` (default) or `"t"`: the reference distribution for
+#'   p-values and intervals. The regression is dynamic, so both are
+#'   asymptotic approximations; `"t"` reproduces `summary.lm()` and EViews.
 #' @return A data frame with one row per coefficient: `term` (column name),
 #'   `variable`, `lag`, `estimate`, `std.error`, `statistic`, `p.value`,
 #'   `conf.low`, `conf.high`. Attributes `cov_type`, `maxlags` and
@@ -22,18 +26,20 @@
 #' adl_coefficients(fit, cov_type = "HAC")
 #' @export
 adl_coefficients <- function(fit, cov_type = c("nonrobust", "HAC"),
-                             maxlags = NULL, alpha = 0.05) {
+                             maxlags = NULL, alpha = 0.05,
+                             dist = c("normal", "t")) {
   check_adl(fit)
   cov_type <- match.arg(cov_type)
+  dist <- match.arg(dist)
   check_alpha(alpha)
   V <- adl_vcov(fit, cov_type, maxlags)
   b <- stats::coef(fit)
   se <- sqrt(diag(V))
-  tab <- coef_table(names(b), b, se, cov_type, df_resid(fit), alpha)
+  tab <- coef_table(names(b), b, se, dist, df_resid(fit), alpha)
   info <- term_info(fit, names(b))
   tab <- cbind(tab[1], info, tab[-1])
   structure(tab, cov_type = cov_type, maxlags = attr(V, "maxlags"),
-            distribution = if (cov_type == "nonrobust") "t" else "normal")
+            distribution = dist)
 }
 
 #' Wald test of linear restrictions on the coefficients
@@ -57,8 +63,9 @@ adl_coefficients <- function(fit, cov_type = c("nonrobust", "HAC"),
 #'   when `terms` and `variables` are `NULL`.
 #' @inheritParams adl_vcov
 #' @param alpha Significance level for the decision.
-#' @param dist `"F"` or `"chi2"`; by default F with the conventional
-#'   covariance and chi-square with HAC.
+#' @param dist `"chisq"` (default) or `"F"`. The regression is dynamic, so
+#'   both are asymptotic approximations; `"F"` (the Wald statistic divided
+#'   by the number of restrictions) reproduces EViews and `anova()`.
 #' @return An object of class `"adltools_test"`.
 #' @examples
 #' set.seed(1)
@@ -73,11 +80,11 @@ adl_coefficients <- function(fit, cov_type = c("nonrobust", "HAC"),
 #' @export
 adl_joint_test <- function(fit, terms = NULL, variables = NULL, R = NULL, r = NULL,
                            cov_type = c("nonrobust", "HAC"), maxlags = NULL,
-                           alpha = 0.05, dist = NULL) {
+                           alpha = 0.05, dist = c("chisq", "F")) {
   check_adl(fit)
   cov_type <- match.arg(cov_type)
   check_alpha(alpha)
-  if (!is.null(dist)) dist <- match.arg(dist, c("F", "chi2"))
+  dist <- match.arg(dist)
   b <- stats::coef(fit)
   k <- length(b)
 
@@ -105,7 +112,7 @@ adl_joint_test <- function(fit, terms = NULL, variables = NULL, R = NULL, r = NU
   V <- adl_vcov(fit, cov_type, maxlags)
   q <- nrow(R)
   w <- wald_stat(b, V, R, r)
-  inf <- wald_inference(w, q, df_resid(fit), cov_type, dist)
+  inf <- wald_inference(w, q, df_resid(fit), dist)
   new_adl_test(c(list(
     method = "wald",
     null_hypothesis = h0,
@@ -133,6 +140,8 @@ adl_joint_test <- function(fit, terms = NULL, variables = NULL, R = NULL, r = NU
 #' @param fit An `"adl"` object.
 #' @inheritParams adl_vcov
 #' @param alpha Significance level for the confidence intervals.
+#' @param dist `"normal"` (default) or `"t"`. The delta method is asymptotic
+#'   in any case.
 #' @return A data frame with `term`, `estimate`, `std.error`, `statistic`
 #'   (for \eqn{H_0: k = 0}), `p.value`, `conf.low`, `conf.high`, and
 #'   attributes `cov_type`, `maxlags`, `distribution`, `C1` and `stable`.
@@ -144,9 +153,10 @@ adl_joint_test <- function(fit, terms = NULL, variables = NULL, R = NULL, r = NU
 #' adl_long_run(fit)
 #' @export
 adl_long_run <- function(fit, cov_type = c("nonrobust", "HAC"), maxlags = NULL,
-                         alpha = 0.05) {
+                         alpha = 0.05, dist = c("normal", "t")) {
   check_adl(fit)
   cov_type <- match.arg(cov_type)
+  dist <- match.arg(dist)
   check_alpha(alpha)
   b <- stats::coef(fit)
   V <- adl_vcov(fit, cov_type, maxlags)
@@ -177,9 +187,9 @@ adl_long_run <- function(fit, cov_type = c("nonrobust", "HAC"), maxlags = NULL,
     g[ar] <- B1 / C1^2
     se[i] <- sqrt(as.numeric(t(g) %*% V %*% g))
   }
-  tab <- coef_table(names(rows), est, se, cov_type, df_resid(fit), alpha)
+  tab <- coef_table(names(rows), est, se, dist, df_resid(fit), alpha)
   structure(tab, cov_type = cov_type, maxlags = attr(V, "maxlags"),
-            distribution = if (cov_type == "nonrobust") "t" else "normal",
+            distribution = dist,
             C1 = C1, stable = stable)
 }
 
@@ -197,9 +207,9 @@ check_alpha <- function(alpha) {
 
 #' Estimates, t/z statistics, p-values and intervals
 #' @noRd
-coef_table <- function(terms, b, se, cov_type, df, alpha) {
+coef_table <- function(terms, b, se, dist, df, alpha) {
   stat <- b / se
-  if (cov_type == "nonrobust") {
+  if (dist == "t") {
     p <- 2 * stats::pt(abs(stat), df, lower.tail = FALSE)
     crit <- stats::qt(1 - alpha / 2, df)
   } else {
