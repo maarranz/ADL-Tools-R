@@ -47,10 +47,12 @@
 #' @param cov_type,maxlags Covariance for the Wald test (see [adl_vcov()]);
 #'   not used by the LR test.
 #' @param alpha Significance level for the decision.
-#' @return An object of class `"adltools_test"`, with `omega` (the AR
-#'   coefficients of the common factor), `restricted` (a data frame of the
-#'   restricted model's coefficients: \eqn{c}, \eqn{\phi}, \eqn{\delta_i},
-#'   \eqn{\omega}), and, for LR, `rss_restricted` and `rss_unrestricted`.
+#' @return An object of class `"adltools_test"`. For LR it also holds
+#'   `omega` (the AR coefficients of the common factor), `restricted` (a
+#'   data frame of the restricted model's coefficients: \eqn{c}, \eqn{\phi},
+#'   \eqn{\delta_i}, \eqn{\omega}), `rss_restricted` and
+#'   `rss_unrestricted`; the Wald form does not estimate the restricted
+#'   model.
 #' @references Sargan, J. D. (1980). Some tests of dynamic specification for
 #'   a single equation. *Econometrica*, 48(4), 879-897.
 #'
@@ -102,23 +104,53 @@ comfac_test <- function(fit, r = 1, method = c("LR", "Wald"),
   T <- length(yv)
   b <- stats::coef(fit)
 
-  # ---- restricted model, by least squares on the same sample --------------
-  # Given omega, filtering y and every regressor by omega(L) leaves a model
-  # linear in (c, phi, delta): the RSS is concentrated on omega (r values)
-  # and minimized by a grid search followed by local refinement.
-  map <- comfac_map(fit, r, colnames(X))
-  conc <- comfac_concentrated(fit, r, X, yv)
-  om_hat <- comfac_minimize(conc$rss, r)
-  ols <- conc$fit(om_hat)
-  theta <- numeric(length(map$labels))
-  theta[map$omega] <- om_hat
-  theta[-map$omega] <- ols$coefficients
-  rss_r <- sum(ols$residuals^2)
-  rss_u <- sum(stats::residuals(fit$lm)^2)
-  omega <- theta[map$omega]
-  restricted <- data.frame(parameter = map$labels, estimate = unname(theta))
+  col_of <- function(v, k) {
+    fit$terms$column[fit$terms$variable == v & fit$terms$lag == k &
+                       fit$terms$role %in% c("ar", "dl")]
+  }
 
-  if (method == "LR") {
+  if (method == "Wald") {
+    if (r != 1 || p != 1 || any(vapply(fit$x, function(v) !identical(lags[[v]], 0:1),
+                                       logical(1)))) {
+      stop("The Wald form is available for r = 1 in models with one lag of y and ",
+           "lags 0 and 1 of each regressor; use method = \"LR\".", call. = FALSE)
+    }
+    V <- adl_vcov(fit, cov_type, maxlags)
+    ya <- col_of(y, 1)
+    a1 <- b[[ya]]
+    g <- numeric(n_x)
+    G <- matrix(0, n_x, length(b), dimnames = list(NULL, names(b)))
+    for (i in seq_along(fit$x)) {
+      c0 <- col_of(fit$x[i], 0); c1 <- col_of(fit$x[i], 1)
+      g[i] <- a1 * b[[c0]] + b[[c1]]
+      G[i, ya] <- b[[c0]]
+      G[i, c0] <- a1
+      G[i, c1] <- 1
+    }
+    stat <- wald_stat(g, G %*% V %*% t(G), diag(n_x), rep(0, n_x))
+    p_val <- stats::pchisq(stat, n_x, lower.tail = FALSE)
+    inf <- list(statistic = stat, distribution = "chi2", df = n_x, p.value = p_val)
+    extra <- list()
+    lags_hac <- attr(V, "maxlags")
+    ctype <- cov_type
+    omega <- NULL
+    restricted <- NULL
+  } else {
+    # Restricted model, by least squares on the same sample: given omega,
+    # filtering y and every regressor by omega(L) leaves a model linear in
+    # (c, phi, delta), so the RSS is concentrated on omega (r values) and
+    # minimized by a grid search followed by local refinement.
+    map <- comfac_map(fit, r, colnames(X))
+    conc <- comfac_concentrated(fit, r, X, yv)
+    om_hat <- comfac_minimize(conc$rss, r)
+    ols <- conc$fit(om_hat)
+    theta <- numeric(length(map$labels))
+    theta[map$omega] <- om_hat
+    theta[-map$omega] <- ols$coefficients
+    rss_r <- sum(ols$residuals^2)
+    rss_u <- sum(stats::residuals(fit$lm)^2)
+    omega <- theta[map$omega]
+    restricted <- data.frame(parameter = map$labels, estimate = unname(theta))
     stat <- T * log(rss_r / rss_u)
     p_val <- stats::pchisq(stat, q_restr, lower.tail = FALSE)
     inf <- list(statistic = stat, distribution = "chi2", df = q_restr,
@@ -126,30 +158,6 @@ comfac_test <- function(fit, r = 1, method = c("LR", "Wald"),
     extra <- list(rss_restricted = rss_r, rss_unrestricted = rss_u)
     lags_hac <- NA_integer_
     ctype <- NULL
-  } else {
-    if (r != 1 || p != 1 || any(vapply(fit$x, function(v) !identical(lags[[v]], 0:1),
-                                       logical(1)))) {
-      stop("The Wald form is available for r = 1 in models with one lag of y and ",
-           "lags 0 and 1 of each regressor; use method = \"LR\".", call. = FALSE)
-    }
-    V <- adl_vcov(fit, cov_type, maxlags)
-    a1 <- b[[paste0(y, "_lag1")]]
-    g <- numeric(n_x)
-    G <- matrix(0, n_x, length(b), dimnames = list(NULL, names(b)))
-    for (i in seq_along(fit$x)) {
-      v <- fit$x[i]
-      b0 <- b[[v]]; b1 <- b[[paste0(v, "_lag1")]]
-      g[i] <- a1 * b0 + b1
-      G[i, paste0(y, "_lag1")] <- b0
-      G[i, v] <- a1
-      G[i, paste0(v, "_lag1")] <- 1
-    }
-    stat <- as.numeric(t(g) %*% solve(G %*% V %*% t(G), g))
-    p_val <- stats::pchisq(stat, n_x, lower.tail = FALSE)
-    inf <- list(statistic = stat, distribution = "chi2", df = n_x, p.value = p_val)
-    extra <- list()
-    lags_hac <- attr(V, "maxlags")
-    ctype <- cov_type
   }
   h0 <- if (r == 1 && p == 1 && n_x == 1 && identical(lags[[fit$x]], 0:1)) {
     paste0("common factor of order 1 (alpha_1 * beta_0 + beta_1 = 0)")
@@ -159,7 +167,7 @@ comfac_test <- function(fit, r = 1, method = c("LR", "Wald"),
     null_hypothesis = h0,
     alpha = alpha, reject_null = inf$p.value < alpha, nobs = T,
     cov_type = ctype, maxlags = lags_hac, n_restrictions = q_restr,
-    r = r, omega = unname(omega), restricted = restricted
+    r = r, omega = if (!is.null(omega)) unname(omega), restricted = restricted
   ), inf, extra), paste0("COMFAC test, order ", r, " (", method, ")"))
 }
 
@@ -271,6 +279,13 @@ comfac_minimize <- function(rss, r) {
     ok <- starts[, 2] + starts[, 1] < 1 & starts[, 2] - starts[, 1] < 1
     starts <- starts[ok, , drop = FALSE]
   } else {
+    # random stationary starts, without disturbing the caller's RNG state
+    if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
+      old_seed <- get(".Random.seed", envir = globalenv())
+      on.exit(assign(".Random.seed", old_seed, envir = globalenv()), add = TRUE)
+    } else {
+      on.exit(rm(".Random.seed", envir = globalenv()), add = TRUE)
+    }
     set.seed(1)
     starts <- t(replicate(2000, {
       roots <- stats::runif(r, -0.95, 0.95)
@@ -291,7 +306,15 @@ comfac_minimize <- function(rss, r) {
     }
     o
   })
-  sols[[which.min(vapply(sols, `[[`, numeric(1), "value"))]]$par
+  conv <- vapply(sols, function(o) o$convergence == 0, logical(1))
+  if (!any(conv)) {
+    warning("The optimizer did not report convergence for the restricted model; ",
+            "the LR statistic may be inaccurate.", call. = FALSE)
+    conv[] <- TRUE
+  }
+  vals <- vapply(sols, `[[`, numeric(1), "value")
+  vals[!conv] <- Inf
+  sols[[which.min(vals)]]$par
 }
 
 #' Coefficients of prod_j (1 - r_j L), as c(1, -w_1, ..., -w_r)

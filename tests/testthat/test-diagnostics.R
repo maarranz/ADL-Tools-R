@@ -83,3 +83,12 @@ test_that("BG without intercept matches lmtest and is non-negative (audit repro 
   expect_equal(bg_test(f, dist = "F")$statistic,
                unname(lmtest::bgtest(f$lm, order = 2, type = "F", fill = 0)$statistic))
 })
+
+test_that("RESET rejects repeated powers and collinear designs (audit)", {
+  fit <- diag_fit()
+  expect_error(reset_test(fit, power = c(2, 2)), "repeat")
+  set.seed(8)
+  d <- stats::ts(cbind(y = rnorm(60), x = rep(0:1, 30)))
+  fb <- adl(y ~ x, d, order = c(0, 0))
+  expect_error(reset_test(fb), "collinear")
+})

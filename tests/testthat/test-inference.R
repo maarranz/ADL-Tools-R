@@ -132,3 +132,14 @@ test_that("summary uses z by default and t on request", {
   sh <- summary(fit, cov_type = "HAC")
   expect_output(print(sh), "HAC \\(Bartlett")
 })
+
+test_that("named R columns are matched by name (audit)", {
+  set.seed(7)
+  d <- stats::ts(data.frame(y = rnorm(100), x = rnorm(100)))
+  f <- adl(y ~ x, d, order = c(0, 0))
+  t1 <- adl_joint_test(f, R = matrix(c(1, 0), 1, dimnames = list(NULL, c("x", "(Intercept)"))))
+  expect_equal(t1$statistic, adl_joint_test(f, terms = "x")$statistic)
+  expect_match(t1$null_hypothesis, "^x = 0")
+  expect_error(adl_joint_test(f, R = matrix(c(1, 0), 1, dimnames = list(NULL, c("x", "w")))),
+               "coefficient names")
+})

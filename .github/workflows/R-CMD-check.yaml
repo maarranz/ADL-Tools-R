@@ -22,6 +22,7 @@ jobs:
         config:
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}   # previous R version
+          - {os: ubuntu-latest,  r: '4.1'}        # oldest version supported (DESCRIPTION)
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
 

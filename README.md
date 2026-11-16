@@ -22,6 +22,8 @@ Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, d
 | Common factors | `comfac_test()`: COMFAC of any order (LR), and the ADL(1,1) Wald form of the chapters |
 | Output | `print()`, `plot()`, `tidy()`, `glance()` |
 
+**Scope.** The tests assume stationary variables, or, where the chapters say so, cointegrated ones. The package does not test for unit roots or cointegration and provides no bounds test or ECM estimation: unit roots belong to `unitroottools`, and cointegration to a planned companion package. With integrated series, a finite long-run multiplier or a conventional Wald p-value does not establish a long-run relation.
+
 Inference uses the asymptotic normal and chi-square distributions by default: the regressions are dynamic, so exact t and F results do not apply. `dist = "t"` or `dist = "F"` reproduces the figures of EViews and `summary.lm()`.
 
 ## Example

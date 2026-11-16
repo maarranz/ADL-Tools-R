@@ -92,6 +92,10 @@ adl_ic <- function(formula, data, max_order, contemporaneous = "both",
   ok <- rep(TRUE, nrow(grid))
   for (v in x) ok <- ok & !(grid[[paste0("fl_", v)]] == 1 & grid[[paste0("q_", v)]] < 1)
   grid <- grid[ok, , drop = FALSE]
+  if (nrow(grid) == 0) {
+    stop("No model fits the grid: a regressor without its contemporaneous term ",
+         "needs q_max >= 1.", call. = FALSE)
+  }
 
   m <- max(pmax, qmax)
   d <- as_adl_data(data, c(spec$y, x, spec$unlagged), time = time,
@@ -110,7 +114,13 @@ adl_ic <- function(formula, data, max_order, contemporaneous = "both",
                             intercept = intercept)
     fit <- stats::lm(f, data = des$frame)
     n <- stats::nobs(fit)
-    k <- length(stats::coef(fit))
+    k <- fit$rank
+    # collinear (aliased) or saturated candidates cannot be estimated by adl()
+    if (anyNA(stats::coef(fit)) || stats::df.residual(fit) < 1) {
+      rows[[i]] <- data.frame(k = length(stats::coef(fit)), aic = NA_real_,
+                              bic = NA_real_, hq = NA_real_)
+      next
+    }
     ll <- as.numeric(stats::logLik(fit))
     rows[[i]] <- data.frame(k = k, aic = (-2 * ll + 2 * k) / n,
                             bic = (-2 * ll + log(n) * k) / n,
@@ -122,6 +132,16 @@ adl_ic <- function(formula, data, max_order, contemporaneous = "both",
     res[[paste0("fl_", v)]] <- NULL
   }
   res <- res[c("p", paste0("q_", x), paste0("x_t_", x), "k", "aic", "bic", "hq")]
+  dropped <- sum(is.na(res$aic))
+  if (dropped == nrow(res)) {
+    stop("None of the candidate models can be estimated (collinear regressors ",
+         "or too few observations).", call. = FALSE)
+  }
+  if (dropped) {
+    message(dropped, " candidate model(s) dropped: collinear regressors or no ",
+            "residual degrees of freedom.")
+    res <- res[!is.na(res$aic), , drop = FALSE]
+  }
   res$best_aic <- res$aic == min(res$aic)
   res$best_bic <- res$bic == min(res$bic)
   res$best_hq <- res$hq == min(res$hq)

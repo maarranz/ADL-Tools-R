@@ -53,8 +53,9 @@ Tests \eqn{H_0: R\beta = r}. The restrictions can be given in three ways:
 column of a regressor at lag 0 has the plain name, e.g. \code{"x"});
 \item \code{variables = "x"} sets all the coefficients of \code{x} (every lag,
 including lag 0) to zero;
-\item \code{R} and \code{r} give general linear restrictions, with the columns of \code{R}
-in the order of \code{coef(fit)}.
+\item \code{R} and \code{r} give general linear restrictions. The columns of \code{R} follow
+the order of \code{coef(fit)}, or, if \code{R} has column names, are matched to
+the coefficients by name.
 }
 
 \code{terms} and \code{variables} can be combined.

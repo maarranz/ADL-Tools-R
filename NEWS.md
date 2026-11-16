@@ -1,5 +1,27 @@
 # adltools 0.2.0.9000
 
+Fixes from the external audit of 2026-11-16 (medium priority):
+
+* `adl_ic()` drops collinear or saturated candidates (with a message) instead
+  of scoring them, and diagnoses an empty grid.
+* `adl_joint_test()` matches the columns of a named `R` to the coefficients
+  by name (they were applied by position). Wald tests stop with a clear
+  message when the restrictions' covariance is singular.
+* `reset_test()` rejects repeated powers and designs where the powers of the
+  fitted values are collinear with the regressors.
+* `comfac_test()`: the Wald form uses the term map and no longer runs the
+  restricted optimizer; the LR optimizer checks convergence and no longer
+  changes the caller's random-number state.
+* `as_adl()` stops on `dynlm` options it cannot reproduce (`weights`,
+  `subset`, ...) instead of silently refitting by OLS, treats bare regressors
+  as lag 0, and checks that the converted fit reproduces the original.
+* Documentation: the dynamic Chow forecast test is a plug-in test (no
+  parameter uncertainty); Granger tests assume stationarity and
+  "instantaneous causality" is a conditional contemporaneous association;
+  long-run multipliers do not establish cointegration; the README states
+  the package's scope.
+* CI also checks R 4.1, the oldest version in `DESCRIPTION`.
+
 Fixes from the external audit of 2026-11-16 (high priority):
 
 * Column names: a variable whose name equals a generated lag (e.g. `x_lag1`

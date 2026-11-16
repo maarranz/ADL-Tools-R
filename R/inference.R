@@ -53,8 +53,9 @@ adl_coefficients <- function(fit, cov_type = c("nonrobust", "HAC"),
 #'   column of a regressor at lag 0 has the plain name, e.g. `"x"`);
 #' * `variables = "x"` sets all the coefficients of `x` (every lag,
 #'   including lag 0) to zero;
-#' * `R` and `r` give general linear restrictions, with the columns of `R`
-#'   in the order of `coef(fit)`.
+#' * `R` and `r` give general linear restrictions. The columns of `R` follow
+#'   the order of `coef(fit)`, or, if `R` has column names, are matched to
+#'   the coefficients by name.
 #'
 #' `terms` and `variables` can be combined.
 #'
@@ -104,6 +105,14 @@ adl_joint_test <- function(fit, terms = NULL, variables = NULL, R = NULL, r = NU
     R <- if (is.matrix(R)) R else matrix(R, nrow = 1)
     if (ncol(R) != k) stop("`R` must have ", k, " columns (one per coefficient).",
                            call. = FALSE)
+    if (!is.null(colnames(R))) {
+      # named columns: match them to the coefficients, in any order
+      if (!setequal(colnames(R), names(b)) || anyDuplicated(colnames(R))) {
+        stop("The column names of `R` must be the coefficient names: ",
+             paste(names(b), collapse = ", "), ".", call. = FALSE)
+      }
+      R <- R[, names(b), drop = FALSE]
+    }
     r <- if (is.null(r)) rep(0, nrow(R)) else r
     if (length(r) != nrow(R)) stop("`r` must have one value per row of `R`.",
                                    call. = FALSE)
@@ -135,6 +144,11 @@ adl_joint_test <- function(fit, terms = NULL, variables = NULL, R = NULL, r = NU
 #' C(1)}, and the long-run intercept \eqn{k_0 = \alpha_0 / C(1)}, where
 #' \eqn{C(1) = 1 - \sum \alpha_i} and \eqn{B_i(1)} is the sum of the lag
 #' coefficients of regressor i. Standard errors by the delta method.
+#'
+#' With integrated variables, a finite estimated multiplier does not by
+#' itself establish a long-run (cointegrating) relation: that needs a
+#' cointegration test (e.g. the bounds test of Pesaran, Shin and Smith,
+#' 2001), which is outside the scope of this package.
 #'
 #' The long run exists only when the model is dynamically stable (all roots
 #' of \eqn{C(z)} outside the unit circle); otherwise the multipliers are

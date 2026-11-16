@@ -26,10 +26,12 @@ not used by the LR test.}
 \item{alpha}{Significance level for the decision.}
 }
 \value{
-An object of class \code{"adltools_test"}, with \code{omega} (the AR
-coefficients of the common factor), \code{restricted} (a data frame of the
-restricted model's coefficients: \eqn{c}, \eqn{\phi}, \eqn{\delta_i},
-\eqn{\omega}), and, for LR, \code{rss_restricted} and \code{rss_unrestricted}.
+An object of class \code{"adltools_test"}. For LR it also holds
+\code{omega} (the AR coefficients of the common factor), \code{restricted} (a
+data frame of the restricted model's coefficients: \eqn{c}, \eqn{\phi},
+\eqn{\delta_i}, \eqn{\omega}), \code{rss_restricted} and
+\code{rss_unrestricted}; the Wald form does not estimate the restricted
+model.
 }
 \description{
 Tests whether the lag polynomials of the ADL model share a common factor

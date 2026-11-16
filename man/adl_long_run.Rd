@@ -40,6 +40,11 @@ C(1)}, and the long-run intercept \eqn{k_0 = \alpha_0 / C(1)}, where
 coefficients of regressor i. Standard errors by the delta method.
 }
 \details{
+With integrated variables, a finite estimated multiplier does not by
+itself establish a long-run (cointegrating) relation: that needs a
+cointegration test (e.g. the bounds test of Pesaran, Shin and Smith,
+2001), which is outside the scope of this package.
+
 The long run exists only when the model is dynamically stable (all roots
 of \eqn{C(z)} outside the unit circle); otherwise the multipliers are
 \code{NA}, with a warning. The delta-method standard errors assume a stable

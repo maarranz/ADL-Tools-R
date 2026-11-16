@@ -91,3 +91,15 @@ test_that("argument checks", {
   expect_output(print(comfac_test(adl(y ~ x, data = d, order = c(1, 1)))),
                 "alpha_1 \\* beta_0 \\+ beta_1 = 0")
 })
+
+test_that("COMFAC: Wald needs no optimizer; RNG state is preserved (audit)", {
+  d <- sim_comfac()
+  fit <- adl(y ~ x, data = d, order = c(1, 1))
+  w <- comfac_test(fit, method = "Wald")
+  expect_null(w$restricted)
+  set.seed(123); a <- runif(1)
+  set.seed(123)
+  f3 <- adl(y ~ x, data = d, order = c(3, 3))
+  invisible(comfac_test(f3, r = 3))
+  expect_equal(runif(1), a)
+})

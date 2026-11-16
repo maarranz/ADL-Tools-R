@@ -52,3 +52,17 @@ test_that("printing and errors", {
   expect_error(adl_ic(y ~ x1, data = d, max_order = c(1, 1), contemporaneous = "no"),
                "contemporaneous")
 })
+
+test_that("collinear candidates are dropped and an empty grid is diagnosed (audit)", {
+  set.seed(7)
+  d <- data.frame(x = rnorm(100), y = rnorm(100))
+  d$copy <- d$x
+  expect_error(suppressMessages(adl_ic(y ~ x + copy, stats::ts(d), c(1, 1))),
+               "None of the candidate models")
+  d$z <- d$x + c(0, d$x[-100])  # collinear only when both x and x_lag1 are in
+  expect_message(tab <- adl_ic(y ~ x + z, stats::ts(d), c(1, 1), contemporaneous = "include"),
+                 "dropped")
+  expect_false(anyNA(tab$aic))
+  expect_error(adl_ic(y ~ x, stats::ts(d), c(1, 0), contemporaneous = "exclude"),
+               "No model fits the grid")
+})

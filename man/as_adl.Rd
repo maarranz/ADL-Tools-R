@@ -12,7 +12,8 @@ as_adl(x, data = NULL, ...)
 \item{data}{The data used in the original call, when they cannot be found
 from it.}
 
-\item{...}{Passed to \code{\link[=adl]{adl()}} (for example \code{time}).}
+\item{...}{Passed to \code{\link[=adl]{adl()}} (for example \code{time}; not \code{order} or
+\code{lags}, which come from the formula).}
 }
 \value{
 An object of class \code{"adl"}.
@@ -26,6 +27,12 @@ supported. The data are taken from the original call unless \code{data} is
 given.
 }
 \details{
+Fit options that \code{adl()} does not support (\code{weights}, \code{subset},
+\code{na.action}, ...) are an error rather than being silently dropped, and the
+converted fit is checked against the original (same observations and
+residual sum of squares). Bare regressors in the formula are lag 0, as in
+\code{dynlm}.
+
 The estimates are the same, except that \code{adl()} counts the trend in
 observations (1, 2, ...) while \code{dynlm::trend()} counts in years (1/4 per
 quarter), so only the trend coefficient (and the intercept) differ in

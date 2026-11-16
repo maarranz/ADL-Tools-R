@@ -49,8 +49,17 @@ and the actual values of the regressors. \eqn{\hat\Omega} is built
 from the \eqn{\psi}-weights of \eqn{1/C(L)}, with
 \eqn{\mathrm{Cov}(e_{T_1+j}, e_{T_1+l}) = \hat\sigma_1^2
   \sum_{i=0}^{j-1} \psi_i \psi_{i+l-j}} for \eqn{j \le l}, treating the
-parameters as known (Hendry, 1979).
+parameters as known (Hendry, 1979). This is a plug-in covariance: it
+omits parameter uncertainty, which matters when \eqn{T_1} is short or
+the forecast block long, so the test is then somewhat oversized. (With
+no lags of \eqn{y} the static and dynamic forecasts coincide, but only
+the static covariance includes parameter uncertainty.)
 }
+
+The F form is exact only for a classical regression with fixed
+regressors; with lagged dependent variables (and, in the static test,
+realized lagged outcomes in the forecast period) both forms are
+asymptotic approximations.
 }
 \examples{
 fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))

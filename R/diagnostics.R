@@ -139,6 +139,7 @@ reset_test <- function(fit, power = 2:3, cov_type = c("nonrobust", "HAC"),
   check_alpha(alpha)
   check_whole(power, "power")
   if (any(power < 2)) stop("`power` must contain integers >= 2.", call. = FALSE)
+  if (anyDuplicated(power)) stop("`power` must not repeat values.", call. = FALSE)
   yhat <- stats::fitted(fit$lm)
   # scale before taking powers, for numerical stability (the test is invariant)
   z <- yhat / max(abs(yhat))
@@ -147,6 +148,10 @@ reset_test <- function(fit, power = 2:3, cov_type = c("nonrobust", "HAC"),
   X <- stats::model.matrix(fit$lm)
   y <- stats::model.response(stats::model.frame(fit$lm))
   aug <- stats::lm(y ~ 0 + cbind(X, P))
+  if (aug$rank < ncol(X) + ncol(P)) {
+    stop("The powers of the fitted values are collinear with the regressors ",
+         "(e.g. a model with only dummies); RESET is not defined here.", call. = FALSE)
+  }
   names(aug$coefficients) <- c(colnames(X), colnames(P))
   n <- length(y)
   lags <- hac_lags(maxlags, cov_type, n)

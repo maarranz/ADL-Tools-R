@@ -32,3 +32,18 @@ test_that("unsupported terms and missing data", {
   expect_error(as_adl(m), "Unsupported|left-hand")
   expect_error(as_adl(lm(y ~ x, data = as.data.frame(adl_sim))), "dynlm fit")
 })
+
+test_that("as_adl() rejects weights and converts bare regressors (audit repro F)", {
+  skip_if_not_installed("dynlm")
+  suppressPackageStartupMessages(library(dynlm))
+  set.seed(7)
+  s <- stats::ts(cbind(x = rnorm(100), y = rnorm(100)))
+  w <- seq_len(100)
+  m <- dynlm(y ~ x, data = s, weights = w)
+  expect_error(as_adl(m), "weights")
+  m0 <- dynlm(y ~ x, data = s)
+  f0 <- as_adl(m0)
+  expect_equal(unname(coef(f0)), unname(coef(m0)))
+  m1 <- dynlm(y ~ x + L(y, 1), data = s)
+  expect_equal(unname(sort(coef(as_adl(m1)))), unname(sort(coef(m1))))
+})

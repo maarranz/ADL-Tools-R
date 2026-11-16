@@ -41,7 +41,13 @@ wald_inference <- function(w, q, df_resid, dist = "chisq") {
 #' @noRd
 wald_stat <- function(b, V, R, r) {
   d <- R %*% b - r
-  as.numeric(t(d) %*% solve(R %*% V %*% t(R), d))
+  M <- R %*% V %*% t(R)
+  if (anyNA(M) || qr(M)$rank < nrow(M)) {
+    stop("The covariance of the restrictions is singular: the restrictions ",
+         "are not identified (collinear regressors, or too few degrees of ",
+         "freedom).", call. = FALSE)
+  }
+  as.numeric(t(d) %*% solve(M, d))
 }
 
 fmt_num <- function(x, digits) {

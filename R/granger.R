@@ -38,7 +38,14 @@
 #' are numerically identical; with HAC or different orders they can differ,
 #' and the classification is then flagged as ambiguous when they disagree.
 #'
-#' Both series are assumed stationary.
+#' Both series are assumed stationary. With integrated series the
+#' chi-square and F references do not apply in general (the Wald statistic
+#' can have a nonstandard distribution); difference the series, or use a
+#' procedure designed for integrated variables. "Instantaneous causality" is
+#' a conditional contemporaneous association between the two series: its
+#' direction cannot be identified without further (structural) assumptions,
+#' and the whole analysis is conditional on the information set used (the
+#' two series only).
 #'
 #' @param y,x Column names in `data`, or, when `data` is `NULL`, the two
 #'   series themselves (numeric vectors, `ts` or `zoo`).
