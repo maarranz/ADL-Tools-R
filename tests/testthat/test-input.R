@@ -95,3 +95,41 @@ test_that("gaps in the time index are an error (audit repro C)", {
   zq <- zoo::zoo(cbind(y = 1:7, x = 1:7), zoo::as.yearqtr(2000 + c(0:3, 5:7) / 4))
   expect_error(as_adl_data(zq, c("y", "x")), "gaps")
 })
+
+test_that("calendar dates must sit at the same point of each period (audit 2)", {
+  set.seed(42)
+  mk <- function(t) data.frame(t = as.Date(t), y = rnorm(length(t)), x = rnorm(length(t)))
+  bad <- mk(c("2020-01-01", "2020-02-25", "2020-03-01", "2020-04-01", "2020-05-01"))
+  expect_error(adl(y ~ x, data = bad, time = "t", order = c(0, 0)),
+               "2020-01-01 and 2020-02-25")
+  # first of the month, month ends, the 30th (capped in February), quarter
+  # ends and annual dates are all regular
+  ok <- list(
+    seq(as.Date("2000-01-01"), by = "month", length.out = 30),
+    zoo::as.Date(zoo::as.yearmon(2000 + (0:29) / 12), frac = 1),
+    as.Date(ifelse(format(seq(as.Date("2001-01-01"), by = "month", length.out = 24), "%m") == "02",
+                   zoo::as.Date(zoo::as.yearmon(seq(as.Date("2001-01-01"), by = "month", length.out = 24)), frac = 1),
+                   seq(as.Date("2001-01-30"), by = "month", length.out = 24)), origin = "1970-01-01"),
+    zoo::as.Date(zoo::as.yearqtr(2000 + (0:29) / 4), frac = 1),
+    seq(as.Date("1990-07-01"), by = "year", length.out = 30)
+  )
+  for (t in ok) {
+    expect_s3_class(adl(y ~ x, data = mk(t), time = "t", order = c(1, 1)), "adl")
+  }
+  # mid-quarter months mixed with quarter starts are not quarterly
+  q <- as.Date(c("2000-01-01", "2000-04-01", "2000-08-01", "2000-10-01", "2001-01-01"))
+  expect_error(adl(y ~ x, data = mk(q), time = "t", order = c(0, 0)), "irregular")
+})
+
+test_that("gaps outside the estimation window do not matter (audit 2)", {
+  set.seed(43)
+  dts <- seq(as.Date("2000-01-01"), by = "month", length.out = 60)[-5]
+  d <- data.frame(t = dts, y = rnorm(59), x = rnorm(59))
+  expect_error(adl(y ~ x, data = d, time = "t", order = c(1, 1)),
+               "2000-04-01 and 2000-06-01")
+  f <- adl(y ~ x, data = d, time = "t", order = c(1, 1), start = as.Date("2002-01-01"))
+  expect_equal(format(f$index[1]), "2002-01-01")
+  # but the initial lags before start count
+  expect_error(adl(y ~ x, data = d, time = "t", order = c(1, 1),
+                   start = as.Date("2000-06-01")), "gaps")
+})

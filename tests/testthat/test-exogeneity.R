@@ -137,3 +137,27 @@ test_that("weak exogeneity: unstable stops; controls, trend and other regressors
                                      ylag = ylag))
   expect_equal(we$kappa, unname(coef(alt)[["ylag"]]))
 })
+
+test_that("a control named ec does not replace the equilibrium error (audit 2)", {
+  set.seed(41)
+  n <- 150
+  x <- as.numeric(arima.sim(list(ar = 0.5), n))
+  ec <- rnorm(n)
+  y <- numeric(n)
+  for (t in 2:n) y[t] <- 0.5 * y[t - 1] + 0.4 * x[t] + 0.3 * x[t - 1] + 0.5 * ec[t] + rnorm(1)
+  d <- stats::ts(cbind(y = y, x = x, ec = ec))
+  f <- adl(y ~ x | ec, data = d, order = c(1, 1))
+  w <- weak_exogeneity_test(f)
+  nm <- names(stats::coef(w$marginal))
+  expect_true(all(c("ec_lag1", "ec_lag1.1") %in% nm))
+  # kappa is the coefficient on the equilibrium error, not on the control:
+  # the same as with the control renamed
+  d2 <- d; colnames(d2)[3] <- "u"
+  w2 <- weak_exogeneity_test(adl(y ~ x | u, data = d2, order = c(1, 1)))
+  expect_equal(w$kappa, w2$kappa)
+  expect_equal(w$p.value, w2$p.value)
+  # a regressor called dx, or a control called x, cannot clash either
+  d3 <- d; colnames(d3)[3] <- "dx"
+  expect_equal(weak_exogeneity_test(adl(y ~ x | dx, data = d3, order = c(1, 1)))$kappa,
+               w$kappa)
+})

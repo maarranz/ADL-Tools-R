@@ -137,3 +137,10 @@ test_that("unstable model: multipliers over 20 lags, NA summaries", {
   expect_true(all(is.na(du$summary$long_run)))
   expect_true(all(is.na(du$effects$pct_cumulative)))
 })
+
+test_that("a short max_horizon warns instead of failing (audit 2)", {
+  fit <- adl(y ~ x, data = adl_sim, order = c(1, 3))
+  expect_warning(dy <- adl_dynamics(fit, max_horizon = 2), "did not settle")
+  expect_equal(max(dy$effects$lag), 2)
+  expect_warning(adl_dynamics(fit, max_horizon = 0), "did not settle")
+})

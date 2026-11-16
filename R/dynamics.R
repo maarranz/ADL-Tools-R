@@ -118,8 +118,8 @@ adl_dynamics <- function(fit, x = NULL, horizon = NULL, tolerance = 0.99,
       close <- abs(lr - Mfull) <= (1 - tolerance) * abs(lr)
       p_ar <- length(alpha)
       first_ok <- NA_integer_
-      for (h in (length(beta) - 1):(H - p_ar)) {
-        if (h < 0) next
+      for (h in seq(max(0L, length(beta) - 1L), H - p_ar, length.out =
+                    max(0L, H - p_ar - max(0L, length(beta) - 1L) + 1L))) {
         if (all(close[(h + 1):(h + 1 + p_ar)])) { first_ok <- h; break }
       }
       if (is.na(first_ok)) {

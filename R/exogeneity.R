@@ -250,24 +250,32 @@ weak_exogeneity_test <- function(fit, x = NULL, lags = 1, strong = FALSE,
   ec <- z[, fit$y] - as.numeric(z[, fit$x, drop = FALSE] %*% k[fit$x])
   lagv <- function(v, j) c(rep(NA, j), v[seq_len(N - j)])
   dv <- function(v) c(NA, diff(z[, v]))
+  # the test's own columns come first and keep their names; columns from
+  # other regressors and controls are renamed if they would clash (a control
+  # called `ec` must not replace the equilibrium error)
   cols <- list(dx = dv(x))
   others <- setdiff(fit$x, x)
   for (j in seq_len(lags)) cols[[paste0("dx_lag", j)]] <- lagv(dv(x), j)
   for (j in seq_len(lags)) cols[[paste0("dy_lag", j)]] <- lagv(dv(fit$y), j)
-  for (v in others) for (j in seq_len(lags)) {
-    cols[[paste0("d", v, "_lag", j)]] <- lagv(dv(v), j)
-  }
   cols$ec_lag1 <- lagv(ec, 1)
-  if (x_level) {
-    cols$x_lag1 <- lagv(z[, x], 1)
-    for (v in others) cols[[paste0(v, "_level_lag1")]] <- lagv(z[, v], 1)
+  if (x_level) cols$x_lag1 <- lagv(z[, x], 1)
+  extra <- list()
+  for (v in others) for (j in seq_len(lags)) {
+    extra <- c(extra, stats::setNames(list(lagv(dv(v), j)), paste0("d", v, "_lag", j)))
   }
-  for (v in fit$unlagged) cols[[paste0(v, "_lag1")]] <- lagv(z[, v], 1)
-  df <- as.data.frame(cols)
+  if (x_level) for (v in others) {
+    extra <- c(extra, stats::setNames(list(lagv(z[, v], 1)), paste0(v, "_level_lag1")))
+  }
+  for (v in fit$unlagged) {
+    extra <- c(extra, stats::setNames(list(lagv(z[, v], 1)), paste0(v, "_lag1")))
+  }
+  if (fit$trend) extra <- c(extra, list(trend = seq_len(N)))
+  cols <- c(cols, extra)
+  names(cols) <- make.unique(names(cols), sep = ".")
+  df <- as.data.frame(cols, check.names = FALSE)
   # same observations as the ADL fit where possible
   keep <- stats::complete.cases(df) & zoo::index(fit$data) %in% fit$index
   df <- df[keep, , drop = FALSE]
-  if (fit$trend) df$trend <- seq_len(nrow(df))
   marg <- stats::lm(dx ~ ., data = df)
   n <- nrow(df)
   lg <- hac_lags(maxlags, cov_type, n)

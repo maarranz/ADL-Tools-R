@@ -3,6 +3,23 @@
 * New vignette `workflow`: one ADL analysis from lag selection to the long
   run and the dynamics, following the ADL chapters.
 
+## Fixes from the second audit
+
+* `weak_exogeneity_test()`: a control or regressor whose name clashed with a
+  column of the marginal regression (e.g. a control called `ec`) silently
+  replaced the equilibrium error, so the reported test was on the wrong
+  coefficient. The test's own columns now keep their names and others are
+  renamed.
+* Dates must be consecutive months, quarters or years *and* sit at the same
+  point of each period (same day, or month end). Before, 1 Jan, 25 Feb and
+  1 Mar were accepted as three consecutive months. The gap message now
+  points at the actual gap.
+* Gaps are checked only within the observations used (the estimation window
+  and its initial lags), so a gap elsewhere in the data no longer prevents
+  estimating on a regular stretch with `start`/`end`.
+* `adl_dynamics()` with a `max_horizon` shorter than the distributed lag
+  failed with an internal error; it now warns and stops at `max_horizon`.
+
 # adltools 0.2.1
 
 Fixes from the external audit of 2026-11-16 (medium priority):
