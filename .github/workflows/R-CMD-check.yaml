@@ -22,13 +22,18 @@ jobs:
         config:
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}   # previous R version
-          - {os: ubuntu-latest,  r: '4.2'}        # oldest version supported (DESCRIPTION)
+          # oldest supported R, with the required dependencies only: the
+          # suggested packages (dynlm -> car -> lme4 -> Matrix, ...) follow
+          # current R and no longer install there; tests that need them skip
+          - {os: ubuntu-latest,  r: '4.2', deps: '"hard"', extra: 'any::testthat',
+             build: '"--no-build-vignettes"', check: '"--ignore-vignettes"'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      _R_CHECK_FORCE_SUGGESTS_: false   # a missing suggested package is not an error
 
     steps:
       - uses: actions/checkout@v4
@@ -42,10 +47,12 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          dependencies: ${{ matrix.config.deps || '"all"' }}
+          extra-packages: any::rcmdcheck ${{ matrix.config.extra }}
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
-          build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf")'
+          build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf", ${{ matrix.config.build || '"--resave-data"' }})'
+          args: 'c("--no-manual", "--as-cran", ${{ matrix.config.check || '"--timings"' }})'
