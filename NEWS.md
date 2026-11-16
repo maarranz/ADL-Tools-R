@@ -1,4 +1,4 @@
-# adltools 0.1.0.9000
+# adltools 0.2.0
 
 * Residual diagnostics: `bg_test()` (Breusch-Godfrey, LM and F forms),
   `arch_test()` (ARCH-LM), `reset_test()` (RESET, conventional or HAC) and

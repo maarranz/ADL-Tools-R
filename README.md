@@ -4,7 +4,7 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: version 0.1.0.** Formulation, estimation, inference, dynamic effects and Granger non-causality. Diagnostics, stability tests and the generalized COMFAC test come in 0.2.0. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.2.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, Chow tests and the generalized COMFAC test. Exogeneity tests and general-to-specific modelling come next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 
@@ -17,6 +17,9 @@ Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, d
 | Dynamic effects | `adl_dynamics()`: dynamic and cumulative multipliers, mean and median lag, inverse roots |
 | Lag orders | `adl_ic()`: AIC, BIC and Hannan–Quinn on a common sample, with and without the contemporaneous regressor |
 | Granger non-causality | `granger_test()`, `granger_test_general()`: Sargent's direct procedure and the eight causal types |
+| Diagnostics | `adl_diagnostics()`, `bg_test()` (Breusch–Godfrey), `arch_test()` (ARCH-LM), `reset_test()` (RESET), `jb_test()` (Jarque–Bera) |
+| Stability | `chow_break_test()`, `chow_forecast_test()` (static 1-step or dynamic N-step) |
+| Common factors | `comfac_test()`: COMFAC of any order (LR), and the ADL(1,1) Wald form of the chapters |
 | Output | `print()`, `plot()`, `tidy()`, `glance()` |
 
 Inference uses the asymptotic normal and chi-square distributions by default: the regressions are dynamic, so exact t and F results do not apply. `dist = "t"` or `dist = "F"` reproduces the figures of EViews and `summary.lm()`.
@@ -45,6 +48,12 @@ adl_ic(y ~ x, data = adl_sim, max_order = c(4, 4))
 
 # Granger non-causality, both directions and instantaneous
 granger_test("y", "x", p = 2, data = adl_sim)
+
+# Diagnostics, stability and common factors
+adl_diagnostics(fit, bg_order = 4)
+chow_break_test(fit, c(2005, 1))
+chow_forecast_test(fit, c(2016, 1), type = "dynamic")
+comfac_test(fit)
 ```
 
 The vignette walks through the Granger procedure: `vignette("granger", package = "adltools")`.
