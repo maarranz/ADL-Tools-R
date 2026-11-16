@@ -4,7 +4,7 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: version 0.2.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, Chow tests and the generalized COMFAC test. Exogeneity tests and general-to-specific modelling come next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.2.1.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, Chow tests, the generalized COMFAC test and exogeneity tests. Super exogeneity, outlier detection and general-to-specific modelling come next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 
@@ -20,6 +20,8 @@ Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, d
 | Diagnostics | `adl_diagnostics()`, `bg_test()` (Breusch–Godfrey), `arch_test()` (ARCH-LM), `reset_test()` (RESET), `jb_test()` (Jarque–Bera) |
 | Stability | `chow_break_test()`, `chow_forecast_test()` (static 1-step or dynamic N-step) |
 | Common factors | `comfac_test()`: COMFAC of any order (LR), and the ADL(1,1) Wald form of the chapters |
+| Exogeneity | `wu_hausman_test()` (predeterminedness), `weak_exogeneity_test()` (weak, and strong with `strong = TRUE`) |
+| Existing fits | `as_adl()` converts a `dynlm` fit |
 | Output | `print()`, `plot()`, `tidy()`, `glance()` |
 
 **Scope.** The tests assume stationary variables, or, where the chapters say so, cointegrated ones. The package does not test for unit roots or cointegration and provides no bounds test or ECM estimation: unit roots belong to `unitroottools`, and cointegration to a planned companion package. With integrated series, a finite long-run multiplier or a conventional Wald p-value does not establish a long-run relation.

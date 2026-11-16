@@ -1,4 +1,4 @@
-# adltools 0.2.0.9000
+# adltools 0.2.1
 
 Fixes from the external audit of 2026-11-16 (medium priority):
 
