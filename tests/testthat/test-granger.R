@@ -116,5 +116,43 @@ test_that("argument errors", {
                "r >= 1")
   expect_error(granger_test_general("y", "x", data = d,
                                     orders = list(y = c(1, 1), x = c(1, 1)), select = "AIC"),
-               "not yet implemented")
+               "not both")
+})
+
+test_that("select: orders by information criterion reproduce the explicit test", {
+  g <- granger_test_general("y", "x", data = adl_sim, select = "bic")
+  expect_equal(g$selection$max_order, 4L)                     # quarterly default
+  ic <- suppressMessages(adl_ic(y ~ x, data = adl_sim, max_order = c(4, 4),
+                                contemporaneous = "exclude"))
+  best <- ic[which.min(ic$bic), ]
+  expect_equal(g$selection$orders$y, c(best$p, best$q_x))
+  ref <- granger_test_general("y", "x", data = adl_sim, orders = g$selection$orders)
+  expect_equal(g$tests, ref$tests)
+  expect_output(print(g), "selected by BIC")
+  ga <- granger_test_general("y", "x", data = adl_sim, select = "aic", max_order = 3)
+  ica <- suppressMessages(adl_ic(y ~ x, data = adl_sim, max_order = c(3, 3),
+                                 contemporaneous = "exclude"))
+  expect_equal(ga$selection$orders$y, unlist(ica[which.min(ica$aic), c("p", "q_x")]),
+               ignore_attr = TRUE)
+  expect_equal(ga$selection$max_order, 3L)
+})
+
+test_that("select = 'gets' uses the dead-start Gets search", {
+  g <- granger_test_general("y", "x", data = adl_sim, select = "gets")
+  gy <- suppressWarnings(adl_gets(y ~ x, data = adl_sim, contemporaneous = "exclude"))
+  expect_equal(g$selection$orders$y, c(length(gy$fit$lags$y), max(gy$fit$lags$x)))
+  expect_output(print(g), "general-to-specific")
+})
+
+test_that("select: inst_orders kept if given; argument errors", {
+  g <- granger_test_general("y", "x", data = adl_sim, select = "bic",
+                            inst_orders = list(y = c(2, 2), x = c(2, 2)))
+  expect_equal(g$tests$own_lags[3:4], c(2, 2))
+  expect_error(granger_test_general("y", "x", data = adl_sim,
+                                    orders = list(y = c(1, 1), x = c(1, 1)),
+                                    select = "bic"), "not both")
+  expect_error(granger_test_general("y", "x", data = adl_sim), "Give `orders`")
+  expect_error(granger_test_general("y", "x", data = adl_sim, select = "cv"))
+  expect_error(granger_test_general("y", "x", data = adl_sim, select = "bic",
+                                    max_order = 0), ">= 1")
 })

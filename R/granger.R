@@ -104,8 +104,25 @@ granger_test <- function(y, x, p, data = NULL, alpha = 0.05,
 #' @param inst_orders Orders of the instantaneous-causality regressions
 #'   (models 3 and 4), in the same form; by default those of `orders`. The
 #'   contemporaneous term is added to these.
-#' @param select Automatic order selection. Not yet implemented; must be
-#'   `NULL`.
+#' @param select Automatic order selection: `NULL` (default, use `orders`),
+#'   `"bic"`, `"aic"`, `"hq"` or `"gets"`. Each Granger regression (models 1
+#'   and 2) gets its own \eqn{(s, r)}, with \eqn{0 \le s \le} `max_order`
+#'   and \eqn{1 \le r \le} `max_order`, chosen on a common sample: by the
+#'   information criterion over the full grid (with [adl_ic()]), or by the
+#'   general-to-specific search of ADL3 (with [adl_gets()]: from
+#'   \eqn{(}`max_order`, `max_order`\eqn{)} the highest lags of both variables
+#'   are dropped jointly while insignificant). The instantaneous models use
+#'   the selected orders unless `inst_orders` is given.
+#'
+#'   Selection and testing use the same data. With the information criteria
+#'   the lags of the other variable are judged by their contribution to the
+#'   fit, together with the own lags; with `"gets"` they are dropped by their
+#'   significance and then tested, a pre-test that favours rejection, so the
+#'   information criteria are preferable. ADL3 notes the trade-off: more lags
+#'   of the other variable capture its influence more completely, but cost
+#'   power.
+#' @param max_order Largest lag considered when `select` is used. By default
+#'   4 for quarterly, 12 for monthly and 2 for other data.
 #' @return An object of class `"granger_test"`; see [granger_test()].
 #' @examples
 #' set.seed(1)
@@ -116,22 +133,65 @@ granger_test <- function(y, x, p, data = NULL, alpha = 0.05,
 #' d <- ts(cbind(y = y, x = x))
 #' granger_test_general("y", "x", data = d,
 #'                      orders = list(y = c(1, 2), x = c(2, 1)))
+#' # orders chosen by BIC for each equation
+#' granger_test_general("y", "x", data = d, select = "bic", max_order = 4)
 #' @export
 granger_test_general <- function(y, x, orders, inst_orders = orders,
                                  data = NULL, alpha = 0.05,
                                  dist = c("chisq", "F"),
                                  cov_type = c("nonrobust", "HAC"),
                                  maxlags = NULL, select = NULL, time = NULL,
-                                 start = NULL, end = NULL) {
+                                 start = NULL, end = NULL, max_order = NULL) {
+  ynm <- deparse(substitute(y))
+  xnm <- deparse(substitute(x))
+  selection <- NULL
   if (!is.null(select)) {
-    stop("Automatic order selection (`select`) is not yet implemented; ",
-         "supply `orders`.", call. = FALSE)
+    select <- match.arg(tolower(select), c("bic", "aic", "hq", "gets"))
+    if (!missing(orders)) {
+      stop("Give either `orders` or `select` (with `max_order`), not both.",
+           call. = FALSE)
+    }
+    pair <- granger_data(y, x, data, ynm, xnm)
+    if (is.null(max_order)) {
+      z <- to_zoo(pair$data, time = time)
+      freq <- tryCatch(stats::frequency(z), error = function(e) 1)
+      max_order <- if (freq == 4) 4L else if (freq == 12) 12L else 2L
+    }
+    check_whole(max_order, "max_order")
+    if (length(max_order) != 1 || max_order < 1) {
+      stop("`max_order` must be a single integer >= 1.", call. = FALSE)
+    }
+    pick <- function(dep, oth) {
+      f <- stats::as.formula(paste(dep, "~", oth))
+      if (select == "gets") {
+        g <- suppressWarnings(adl_gets(f, data = pair$data, max_order = max_order,
+                                       contemporaneous = "exclude", time = time,
+                                       start = start, end = end))
+        c(length(g$fit$lags[[1]]), max(g$fit$lags[[2]]))
+      } else {
+        tab <- suppressMessages(adl_ic(f, data = pair$data,
+                                       max_order = c(max_order, max_order),
+                                       contemporaneous = "exclude", time = time,
+                                       start = start, end = end))
+        best <- tab[which.min(tab[[select]]), ]
+        c(best$p, best[[paste0("q_", oth)]])
+      }
+    }
+    orders <- list(y = as.integer(pick(pair$y, pair$x)),
+                   x = as.integer(pick(pair$x, pair$y)))
+    if (missing(inst_orders)) inst_orders <- orders
+    selection <- list(method = select, max_order = as.integer(max_order),
+                      orders = orders)
+  } else if (missing(orders)) {
+    stop("Give `orders`, or choose them with `select`.", call. = FALSE)
   }
   orders <- check_orders(orders, "orders")
   inst_orders <- check_orders(inst_orders, "inst_orders")
-  granger_engine(y, x, data, orders, inst_orders, alpha, match.arg(dist),
-                 match.arg(cov_type), maxlags, time, start, end,
-                 ynm = deparse(substitute(y)), xnm = deparse(substitute(x)))
+  res <- granger_engine(y, x, data, orders, inst_orders, alpha, match.arg(dist),
+                        match.arg(cov_type), maxlags, time, start, end,
+                        ynm = ynm, xnm = xnm)
+  res$selection <- selection
+  res
 }
 
 # Engine --------------------------------------------------------------------
@@ -322,7 +382,14 @@ print.granger_test <- function(x, digits = 4, ...) {
          else "conventional OLS"
   cat("Covariance:  ", cov, "\n", sep = "")
   cat("Decisions:   ", if (x$dist == "F") "F" else "Chi-square", " tests at ",
-      format(100 * x$alpha), "%\n\n", sep = "")
+      format(100 * x$alpha), "%\n", sep = "")
+  if (!is.null(x$selection)) {
+    cat("Orders:      (s, r) selected by ",
+        if (x$selection$method == "gets") "general-to-specific" else
+          toupper(x$selection$method),
+        " for each equation, up to ", x$selection$max_order, " lags\n", sep = "")
+  }
+  cat("\n")
 
   t <- x$tests
   show <- data.frame(

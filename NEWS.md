@@ -1,4 +1,4 @@
-# adltools 0.3.0.9000
+# adltools 0.4.0
 
 * `adl_outliers()`: impulse and step dummies in the ADL equation, found by a
   forward-backward search on t-statistics (default) or by indicator
@@ -12,6 +12,10 @@
   on every simpler model, and the search backs up if one fails. x_t is never
   dropped by significance: `contemporaneous = "include"`, `"exclude"` or
   `"both"`. The full path is printed.
+* `granger_test_general(select = )`: automatic order selection for each
+  Granger equation, by BIC, AIC or HQ over all (s, r) up to `max_order`, or
+  by the general-to-specific search (documented as a pre-test). The
+  instantaneous models use the selected orders.
 
 ## Fixes from the third audit
 

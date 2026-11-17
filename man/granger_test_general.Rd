@@ -17,7 +17,8 @@ granger_test_general(
   select = NULL,
   time = NULL,
   start = NULL,
-  end = NULL
+  end = NULL,
+  max_order = NULL
 )
 }
 \arguments{
@@ -48,8 +49,23 @@ adjustment).}
 \eqn{\lfloor 4 (n/100)^{2/9} \rfloor}{floor(4 (n/100)^(2/9))}, capped at
 \eqn{n - 1}. Must be \code{NULL} with \code{cov_type = "nonrobust"}.}
 
-\item{select}{Automatic order selection. Not yet implemented; must be
-\code{NULL}.}
+\item{select}{Automatic order selection: \code{NULL} (default, use \code{orders}),
+\code{"bic"}, \code{"aic"}, \code{"hq"} or \code{"gets"}. Each Granger regression (models 1
+and 2) gets its own \eqn{(s, r)}, with \eqn{0 \le s \le} \code{max_order}
+and \eqn{1 \le r \le} \code{max_order}, chosen on a common sample: by the
+information criterion over the full grid (with \code{\link[=adl_ic]{adl_ic()}}), or by the
+general-to-specific search of ADL3 (with \code{\link[=adl_gets]{adl_gets()}}: from
+\eqn{(}\code{max_order}, \code{max_order}\eqn{)} the highest lags of both variables
+are dropped jointly while insignificant). The instantaneous models use
+the selected orders unless \code{inst_orders} is given.
+
+Selection and testing use the same data. With the information criteria
+the lags of the other variable are judged by their contribution to the
+fit, together with the own lags; with \code{"gets"} they are dropped by their
+significance and then tested, a pre-test that favours rejection, so the
+information criteria are preferable. ADL3 notes the trade-off: more lags
+of the other variable capture its influence more completely, but cost
+power.}
 
 \item{time}{Name of the time column when \code{data} is a data frame; detected
 automatically when there is a single date column.}
@@ -59,6 +75,9 @@ automatically when there is a single date column.}
 \code{start} is the first observation estimated; the lags use the
 observations before it, as in \code{dynlm} and EViews. Without \code{start}, the
 first \code{max_lag} observations of the data are the initial values.}
+
+\item{max_order}{Largest lag considered when \code{select} is used. By default
+4 for quarterly, 12 for monthly and 2 for other data.}
 }
 \value{
 An object of class \code{"granger_test"}; see \code{\link[=granger_test]{granger_test()}}.
@@ -77,4 +96,6 @@ for (t in 2:n) y[t] <- 0.5 * y[t - 1] + 0.4 * x[t - 1] + rnorm(1)
 d <- ts(cbind(y = y, x = x))
 granger_test_general("y", "x", data = d,
                      orders = list(y = c(1, 2), x = c(2, 1)))
+# orders chosen by BIC for each equation
+granger_test_general("y", "x", data = d, select = "bic", max_order = 4)
 }

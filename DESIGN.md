@@ -151,7 +151,8 @@ Follows the direct (Sargent, 1976) procedure of ADL3, not
 - **Two functions, one engine**:
   - `granger_test(y, x, p)`: the same order p in all four models.
   - `granger_test_general(y, x, ...)`: separate orders per model, supplied by
-    the user or selected automatically (maximum lag; AIC/BIC or Gets). The
+    the user or selected automatically (`select`, `max_order`: BIC, AIC, HQ
+    over the (s, r) grid, or Gets; done in 0.4.0). The
     instantaneous models default to the orders of the corresponding Granger
     models. Unit test: with all orders equal to p it reproduces
     `granger_test()` exactly.
@@ -365,10 +366,10 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 - **v0.3.0** (released 2026-11-17) — stability without a break date
   (`recursive_residuals()`, `cusum_test()`, `cusumsq_test()` with plots,
   `hansen_test()` per parameter and joint); `super_exogeneity_test()`.
-- **v0.4** — outlier detection (`adl_outliers()`) and `adl_gets()` tier 1
-  (both done in 0.3.0.9000), and
-  automatic lag selection in `granger_test_general()` (same engine; the
-  argument exists from v0.1.0 and stops with "not yet implemented").
+- **v0.4.0** (released 2026-11-17) — `adl_outliers()` (own search or
+  `gets::isat()`), `adl_gets()` tier 1, automatic order selection in
+  `granger_test_general()` (`select = "bic"/"aic"/"hq"/"gets"`), the
+  `slopes` option of `super_exogeneity_test()`; fixes from the third audit.
 - **Later** — J-test with the four-outcome reading; standard errors for
   dynamic multipliers and lags; ECM view; dynamic forecasts with ψ-weight
   variance and fan charts; Sargan's general COMFAC Wald; `gets` adapter

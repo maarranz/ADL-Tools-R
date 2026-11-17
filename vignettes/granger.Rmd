@@ -108,6 +108,19 @@ granger_test_general("y", "x", data = adl_sim,
 With unequal orders the two instantaneous tests can disagree. The result is
 then flagged as ambiguous and both candidate types are shown.
 
+The orders can also be chosen from the data, separately for each equation,
+by an information criterion over all $(s, r)$ up to `max_order` (4 for
+quarterly data by default):
+
+```{r}
+granger_test_general("y", "x", data = adl_sim, select = "bic")
+```
+
+`select = "gets"` uses the general-to-specific search instead, but it drops
+lags of the other variable by their significance and then tests them, a
+pre-test that favours finding causality; the information criteria are the
+safer choice.
+
 ## An unrelated pair
 
 ```{r}

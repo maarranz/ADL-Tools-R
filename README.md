@@ -4,7 +4,7 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: version 0.3.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super), outlier and break detection, and general-to-specific lag selection. Automatic lag selection in `granger_test_general()` comes next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.4.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality (with automatic lag selection), residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super), outlier and break detection, and general-to-specific lag selection. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 
@@ -17,7 +17,7 @@ Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, d
 | Dynamic effects | `adl_dynamics()`: dynamic and cumulative multipliers, mean and median lag, inverse roots |
 | Lag orders | `adl_ic()`: AIC, BIC and Hannan–Quinn on a common sample, with and without the contemporaneous regressor |
 | General-to-specific | `adl_gets()`: from ADL(p, p) down, joint Wald tests of the highest lags, diagnostics at every step |
-| Granger non-causality | `granger_test()`, `granger_test_general()`: Sargent's direct procedure and the eight causal types |
+| Granger non-causality | `granger_test()`, `granger_test_general()`: Sargent's direct procedure and the eight causal types; orders by BIC/AIC/HQ or Gets with `select` |
 | Diagnostics | `adl_diagnostics()`, `bg_test()` (Breusch–Godfrey), `arch_test()` (ARCH-LM), `reset_test()` (RESET), `jb_test()` (Jarque–Bera) |
 | Stability | `cusum_test()`, `cusumsq_test()` (with plots), `hansen_test()` (per parameter, no break date), `chow_break_test()`, `chow_forecast_test()` (static 1-step or dynamic N-step) |
 | Common factors | `comfac_test()`: COMFAC of any order (LR), and the ADL(1,1) Wald form of the chapters |
