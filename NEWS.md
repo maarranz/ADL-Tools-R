@@ -6,6 +6,11 @@
   coefficient and the error variance, and all jointly, without a break date.
   CUSUM uses the EViews scaling (standard error of the regression); the
   CUSUM-of-squares bounds come from the exact distribution by simulation.
+* `super_exogeneity_test()` (Engle and Hendry, 1993, as outlined in ADL3):
+  impulse and step dummies for the breaks in the marginal process of x are
+  tested in the regression for the change in x (they should matter), in the
+  ADL (they should not: invariance) and with weak exogeneity, in one table.
+  Warns when the marginal model shows no break, so the test is uninformative.
 
 # adltools 0.2.2
 

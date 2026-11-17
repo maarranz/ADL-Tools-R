@@ -105,3 +105,6 @@ models. \emph{Oxford Bulletin of Economics and Statistics}, 54(2), 187-207.
 Engle, R. F., Hendry, D. F. and Richard, J.-F. (1983). Exogeneity.
 \emph{Econometrica}, 51(2), 277-304.
 }
+\seealso{
+\code{\link[=super_exogeneity_test]{super_exogeneity_test()}}, \code{\link[=wu_hausman_test]{wu_hausman_test()}}
+}

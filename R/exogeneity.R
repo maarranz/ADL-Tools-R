@@ -215,6 +215,7 @@ wu_hausman_test <- function(fit, x = NULL, instruments,
 #'
 #'   Engle, R. F., Hendry, D. F. and Richard, J.-F. (1983). Exogeneity.
 #'   *Econometrica*, 51(2), 277-304.
+#' @seealso [super_exogeneity_test()], [wu_hausman_test()]
 #' @examples
 #' fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
 #' weak_exogeneity_test(fit)
@@ -236,6 +237,45 @@ weak_exogeneity_test <- function(fit, x = NULL, lags = 1, strong = FALSE,
   dist <- dist %||% if (strong) "chisq" else "normal"
   dist <- match.arg(dist, if (strong) c("chisq", "F") else c("normal", "t"))
 
+  df <- marginal_frame(fit, x, lags, x_level)
+  marg <- stats::lm(dx ~ ., data = df)
+  n <- nrow(df)
+  lg <- hac_lags(maxlags, cov_type, n)
+  V <- if (cov_type == "HAC") {
+    sandwich::NeweyWest(marg, lag = lg, prewhite = FALSE, adjust = FALSE)
+  } else stats::vcov(marg)
+  b <- stats::coef(marg)
+  dfr <- stats::df.residual(marg)
+  if (!strong) {
+    inf <- single_coef_inference(b[["ec_lag1"]], sqrt(V["ec_lag1", "ec_lag1"]), dfr, dist)
+    h0 <- paste0(x, " is weakly exogenous (kappa = 0)")
+    q <- 1L
+    title <- "Weak exogeneity test (regression for the change in x)"
+  } else {
+    terms <- c("ec_lag1", paste0("dy_lag", seq_len(lags)))
+    q <- length(terms)
+    R <- matrix(0, q, length(b))
+    R[cbind(seq_len(q), match(terms, names(b)))] <- 1
+    w <- wald_stat(b, V, R, rep(0, q))
+    inf <- wald_inference(w, q, dfr, dist)
+    h0 <- paste0(x, " is strongly exogenous (kappa = 0 and no lagged change in ",
+                 fit$y, ")")
+    title <- "Strong exogeneity test (regression for the change in x)"
+  }
+  new_adl_test(c(list(
+    method = if (strong) "strong_exogeneity" else "weak_exogeneity",
+    null_hypothesis = h0,
+    alpha = alpha, reject_null = inf$p.value < alpha, nobs = n,
+    cov_type = cov_type, maxlags = lg, n_restrictions = q, df_resid = dfr,
+    kappa = b[["ec_lag1"]], marginal = marg
+  ), inf), title)
+}
+
+#' Data for the regression for the change in x (weak, strong and super
+#' exogeneity tests). Returns a data frame with `dx` first and the index of
+#' its rows in attribute "index".
+#' @noRd
+marginal_frame <- function(fit, x, lags, x_level) {
   if (!is_stable(fit)) {
     stop("The model is not dynamically stable, so there is no long-run ",
          "relation and no equilibrium error to test against.", call. = FALSE)
@@ -276,37 +316,8 @@ weak_exogeneity_test <- function(fit, x = NULL, lags = 1, strong = FALSE,
   # same observations as the ADL fit where possible
   keep <- stats::complete.cases(df) & zoo::index(fit$data) %in% fit$index
   df <- df[keep, , drop = FALSE]
-  marg <- stats::lm(dx ~ ., data = df)
-  n <- nrow(df)
-  lg <- hac_lags(maxlags, cov_type, n)
-  V <- if (cov_type == "HAC") {
-    sandwich::NeweyWest(marg, lag = lg, prewhite = FALSE, adjust = FALSE)
-  } else stats::vcov(marg)
-  b <- stats::coef(marg)
-  dfr <- stats::df.residual(marg)
-  if (!strong) {
-    inf <- single_coef_inference(b[["ec_lag1"]], sqrt(V["ec_lag1", "ec_lag1"]), dfr, dist)
-    h0 <- paste0(x, " is weakly exogenous (kappa = 0)")
-    q <- 1L
-    title <- "Weak exogeneity test (regression for the change in x)"
-  } else {
-    terms <- c("ec_lag1", paste0("dy_lag", seq_len(lags)))
-    q <- length(terms)
-    R <- matrix(0, q, length(b))
-    R[cbind(seq_len(q), match(terms, names(b)))] <- 1
-    w <- wald_stat(b, V, R, rep(0, q))
-    inf <- wald_inference(w, q, dfr, dist)
-    h0 <- paste0(x, " is strongly exogenous (kappa = 0 and no lagged change in ",
-                 fit$y, ")")
-    title <- "Strong exogeneity test (regression for the change in x)"
-  }
-  new_adl_test(c(list(
-    method = if (strong) "strong_exogeneity" else "weak_exogeneity",
-    null_hypothesis = h0,
-    alpha = alpha, reject_null = inf$p.value < alpha, nobs = n,
-    cov_type = cov_type, maxlags = lg, n_restrictions = q, df_resid = dfr,
-    kappa = b[["ec_lag1"]], marginal = marg
-  ), inf), title)
+  attr(df, "index") <- zoo::index(fit$data)[keep]
+  df
 }
 
 #' The regressor entering at lag 0 (default: the only one)

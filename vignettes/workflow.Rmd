@@ -194,6 +194,39 @@ and $y_{t-2}$ add almost nothing once $x_{t-1}$ is in the first stage:
 the instruments are weak, and the test is no evidence either way. (`max_lag
 = 2` keeps the fitted sample identical to the one the instruments need.)
 
+### Super exogeneity
+
+Super exogeneity adds invariance: the ADL must not change when the process
+generating $x$ changes, which is what policy analysis needs (the Lucas
+critique). It can only be checked where the process of $x$ did change, and
+in `adl_sim` it never does. So we simulate two versions of the same story:
+the mean of $x$ shifts in 2005 Q1; in the first, $y$ given $x$ is
+unchanged; in the second, the impact effect $\beta_0$ changes with it.
+
+```{r}
+sim <- function(lucas, seed) {
+  set.seed(seed)
+  n <- 120
+  x <- y <- numeric(n)
+  for (t in 2:n) {
+    x[t] <- 0.5 * x[t - 1] + 2 * (t >= 61) + rnorm(1)   # step in 2005 Q1
+    b0 <- if (lucas && t >= 61) 1.2 else 0.4
+    y[t] <- 1 + 0.5 * y[t - 1] + b0 * x[t] + 0.3 * x[t - 1] + rnorm(1)
+  }
+  ts(cbind(y = y, x = x), start = c(1990, 1), frequency = 4)
+}
+fit_inv <- adl(y ~ x, data = sim(FALSE, 1), order = c(1, 1))
+super_exogeneity_test(fit_inv, steps = c(2005, 1))
+fit_lucas <- adl(y ~ x, data = sim(TRUE, 2), order = c(1, 1))
+super_exogeneity_test(fit_lucas, steps = c(2005, 1))
+```
+
+The table reads in the order of ADL3: the step dummy is significant in the
+marginal model of $x$ (there is something to test), and weak exogeneity is
+not rejected. In the first model the dummy is irrelevant in the ADL: $x$ is
+super exogenous. In the second the ADL breaks at the same date, and a policy
+simulation that moved $x$ would be misleading.
+
 ## 6. The long run and the dynamics (ADL2)
 
 ```{r}
@@ -223,7 +256,7 @@ circle.
 | Diagnostics | `adl_diagnostics()`, `bg_test()`, `arch_test()`, `reset_test()`, `jb_test()` | ADL3 |
 | Stability | `cusum_test()`, `cusumsq_test()`, `hansen_test()`, `chow_break_test()`, `chow_forecast_test()` | ADL3, ADL4 |
 | Restrictions | `adl_joint_test()`, `comfac_test()` | ADL2 |
-| Exogeneity | `weak_exogeneity_test()`, `wu_hausman_test()` | ADL1, ADL3 |
+| Exogeneity | `weak_exogeneity_test()`, `wu_hausman_test()`, `super_exogeneity_test()` | ADL1, ADL3 |
 | Causality | `granger_test()` (see `vignette("granger")`) | ADL3 |
 | Long run, dynamics | `adl_long_run()`, `adl_dynamics()` | ADL2 |
 
