@@ -5,6 +5,13 @@
   saturation with `gets::isat()` (`method = "isat"`), with the tsoutliers
   critical value (3 to 4, growing with T). Returns the ADL refitted with the
   dummies, and the dates in the form `super_exogeneity_test()` takes.
+* `adl_gets()`: the general-to-specific procedure of ADL3. From a general
+  ADL(p, p) on a common sample (p = 4 quarterly, 12 monthly by default), the
+  highest lags of y and every x are dropped jointly while their Wald test
+  does not reject; the diagnostics (BG, ARCH, RESET by default) are re-run
+  on every simpler model, and the search backs up if one fails. x_t is never
+  dropped by significance: `contemporaneous = "include"`, `"exclude"` or
+  `"both"`. The full path is printed.
 
 # adltools 0.3.0
 

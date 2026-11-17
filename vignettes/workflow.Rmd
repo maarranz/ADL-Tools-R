@@ -50,8 +50,19 @@ adl_ic(y ~ x, data = adl_sim, max_order = c(3, 3))
 ```
 
 BIC and Hannan–Quinn choose the ADL(1,1); AIC, which penalizes extra
-parameters less, prefers one more lag of $x$. We take the ADL(1,1) and let
-the diagnostics tell us whether anything is missing.
+parameters less, prefers one more lag of $x$.
+
+The other strategy of ADL3 is general-to-specific: start from a generous
+ADL(4,4) (quarterly data), check that it passes the diagnostics, and drop
+the highest lags of $y$ and $x$ jointly while they are not significant,
+re-running the diagnostics on every simpler model:
+
+```{r}
+adl_gets(y ~ x, data = adl_sim)
+```
+
+Both strategies agree. We take the ADL(1,1) and let the diagnostics tell
+us whether anything is missing.
 
 ## 2. Estimation (ADL1)
 
@@ -265,7 +276,7 @@ circle.
 
 | Step | Function | Chapter |
 |:--|:--|:--|
-| Lag orders | `adl_ic()` | ADL3 (information criteria) |
+| Lag orders | `adl_ic()`, `adl_gets()` | ADL3 (information criteria, Gets) |
 | Estimation | `adl()`, `summary()` | ADL1 |
 | Diagnostics | `adl_diagnostics()`, `bg_test()`, `arch_test()`, `reset_test()`, `jb_test()` | ADL3 |
 | Stability | `cusum_test()`, `cusumsq_test()`, `hansen_test()`, `chow_break_test()`, `chow_forecast_test()` | ADL3, ADL4 |

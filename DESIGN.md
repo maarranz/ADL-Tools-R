@@ -245,11 +245,16 @@ Decided 2026-11-17:
 
 ## 10. Automatic modelling (Gets)
 
-- **Tier 1, `adl_gets()`** — the ADL3 procedure: general ADL(p, …, p) on the
-  common sample; diagnostics on the general model; drop the highest lags
-  jointly while not rejected; stop at the first rejection; back up if a
-  simplified model fails a diagnostic; report the full path. `method = "ic"`
-  for AIC/BIC over the same grid. Uses the `contemporaneous` rule (§3.7).
+- **Tier 1, `adl_gets()`** (done in 0.3.0.9000) — the ADL3 procedure:
+  general ADL(p, …, p) on the common sample (p by frequency: 4, 12, else 2);
+  diagnostics on the general model (warning if it fails); drop the highest
+  lags jointly while not rejected; stop at the first rejection; back up if a
+  simplified model fails a diagnostic it did not fail before (BG of order p,
+  ARCH, RESET by default; JB optional); report the full path. Uses the
+  `contemporaneous` rule (§3.7), with `"include"` as default. No
+  `method = "ic"`: information criteria stay in `adl_ic()`. Monte Carlo
+  (true ADL(2,2), T = 200, 300 reps): selects 2 in 82%, 3 or 4 in 18%,
+  never fewer.
   Shares its engine with automatic lag selection in
   `granger_test_general()` and the sequential COMFAC search.
 - **Tier 2** — term-by-term multi-path search through an adapter to the
@@ -360,8 +365,8 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 - **v0.3.0** (released 2026-11-17) — stability without a break date
   (`recursive_residuals()`, `cusum_test()`, `cusumsq_test()` with plots,
   `hansen_test()` per parameter and joint); `super_exogeneity_test()`.
-- **v0.4** — outlier detection (`adl_outliers()`, done in 0.3.0.9000),
-  `adl_gets()` tier 1, and
+- **v0.4** — outlier detection (`adl_outliers()`) and `adl_gets()` tier 1
+  (both done in 0.3.0.9000), and
   automatic lag selection in `granger_test_general()` (same engine; the
   argument exists from v0.1.0 and stops with "not yet implemented").
 - **Later** — J-test with the four-outcome reading; standard errors for

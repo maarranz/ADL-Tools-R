@@ -4,7 +4,7 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: version 0.3.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super), and outlier and break detection. General-to-specific modelling comes next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.3.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super), outlier and break detection, and general-to-specific lag selection. Automatic lag selection in `granger_test_general()` comes next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 
@@ -16,6 +16,7 @@ Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, d
 | Inference | `summary()`, `adl_coefficients()` (parameters in the chapters' α/β notation), `adl_joint_test()`, `adl_long_run()`; conventional or Newey–West (HAC) covariance |
 | Dynamic effects | `adl_dynamics()`: dynamic and cumulative multipliers, mean and median lag, inverse roots |
 | Lag orders | `adl_ic()`: AIC, BIC and Hannan–Quinn on a common sample, with and without the contemporaneous regressor |
+| General-to-specific | `adl_gets()`: from ADL(p, p) down, joint Wald tests of the highest lags, diagnostics at every step |
 | Granger non-causality | `granger_test()`, `granger_test_general()`: Sargent's direct procedure and the eight causal types |
 | Diagnostics | `adl_diagnostics()`, `bg_test()` (Breusch–Godfrey), `arch_test()` (ARCH-LM), `reset_test()` (RESET), `jb_test()` (Jarque–Bera) |
 | Stability | `cusum_test()`, `cusumsq_test()` (with plots), `hansen_test()` (per parameter, no break date), `chow_break_test()`, `chow_forecast_test()` (static 1-step or dynamic N-step) |
