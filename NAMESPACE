@@ -10,6 +10,7 @@ S3method(logLik,adl)
 S3method(model.matrix,adl)
 S3method(nobs,adl)
 S3method(plot,adl_dynamics)
+S3method(plot,adltools_stability)
 S3method(print,adl)
 S3method(print,adl_diagnostics)
 S3method(print,adl_dynamics)
@@ -38,25 +39,25 @@ export(bg_test)
 export(chow_break_test)
 export(chow_forecast_test)
 export(comfac_test)
+export(cusum_test)
+export(cusumsq_test)
 export(glance)
 export(granger_test)
 export(granger_test_general)
+export(hansen_test)
 export(jb_test)
+export(recursive_residuals)
 export(reset_test)
 export(tidy)
 export(weak_exogeneity_test)
 export(wu_hausman_test)
-importFrom(generics,
-  glance,
-  tidy
-)
-importFrom(stats,
-  coef,
-  fitted,
-  formula,
-  logLik,
-  model.matrix,
-  nobs,
-  residuals,
-  vcov
-)
+importFrom(generics,glance)
+importFrom(generics,tidy)
+importFrom(stats,coef)
+importFrom(stats,fitted)
+importFrom(stats,formula)
+importFrom(stats,logLik)
+importFrom(stats,model.matrix)
+importFrom(stats,nobs)
+importFrom(stats,residuals)
+importFrom(stats,vcov)

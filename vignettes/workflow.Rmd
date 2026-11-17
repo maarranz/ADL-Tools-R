@@ -88,9 +88,29 @@ correct, so using HAC there would presume the answer.
 
 ### Parameter stability
 
-A break at a chosen date, and the predictive failure test from 2016 on, in
-its two forms (ADL3 and ADL4): static, one-step forecasts with the actual
-lagged values; and dynamic, one forecast path from 2015 Q4.
+First the tests that need no break date. CUSUM and CUSUM of squares follow
+the recursive residuals through the sample; the plots show whether the
+paths leave the 5% bounds, and where:
+
+```{r, fig.width = 7, fig.height = 4}
+cs <- cusum_test(fit)
+cs
+plot(cs)
+cq <- cusumsq_test(fit)
+plot(cq)
+```
+
+Hansen's (1992) test needs no recursion either, and it says which
+parameter is unstable, if any, including the error variance:
+
+```{r}
+hansen_test(fit)
+```
+
+Then the Chow tests, for a date chosen in advance: a break in 2005, and the
+predictive failure test from 2016 on, in its two forms (ADL3 and ADL4):
+static, one-step forecasts with the actual lagged values; and dynamic, one
+forecast path from 2015 Q4.
 
 ```{r}
 chow_break_test(fit, c(2005, 1))
@@ -201,7 +221,7 @@ circle.
 | Lag orders | `adl_ic()` | ADL3 (information criteria) |
 | Estimation | `adl()`, `summary()` | ADL1 |
 | Diagnostics | `adl_diagnostics()`, `bg_test()`, `arch_test()`, `reset_test()`, `jb_test()` | ADL3 |
-| Stability | `chow_break_test()`, `chow_forecast_test()` | ADL3, ADL4 |
+| Stability | `cusum_test()`, `cusumsq_test()`, `hansen_test()`, `chow_break_test()`, `chow_forecast_test()` | ADL3, ADL4 |
 | Restrictions | `adl_joint_test()`, `comfac_test()` | ADL2 |
 | Exogeneity | `weak_exogeneity_test()`, `wu_hausman_test()` | ADL1, ADL3 |
 | Causality | `granger_test()` (see `vignette("granger")`) | ADL3 |

@@ -1,3 +1,12 @@
+# adltools 0.2.2.9000
+
+* Stability tests (ADL3): `recursive_residuals()`, `cusum_test()` and
+  `cusumsq_test()` (Brown, Durbin and Evans, 1975), with `plot()` methods
+  drawing the bounds, and `hansen_test()` (Hansen, 1992), which tests each
+  coefficient and the error variance, and all jointly, without a break date.
+  CUSUM uses the EViews scaling (standard error of the regression); the
+  CUSUM-of-squares bounds come from the exact distribution by simulation.
+
 # adltools 0.2.2
 
 * New vignette `workflow`: one ADL analysis from lag selection to the long

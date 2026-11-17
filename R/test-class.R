@@ -72,10 +72,17 @@ print.adltools_test <- function(x, digits = 4, ...) {
   dist <- x$distribution
   df <- if (identical(dist, "F")) paste0("(", x$df_num, ", ", x$df_denom, ")")
         else if (!is.null(x$df) && !is.na(x$df)) paste0("(", x$df, ")") else ""
-  label <- switch(dist, normal = "z", t = "t", chi2 = "Chi-square", F = "F", dist)
+  label <- switch(dist, normal = "z", t = "t", chi2 = "Chi-square", F = "F",
+                  cusum = "CUSUM, max |W_r| / (sqrt(m) + 2r/sqrt(m))",
+                  cusumsq = "CUSUM of squares, max |S_r - r/m|",
+                  hansen = "Hansen L_c", dist)
   cat("H0:          ", x$null_hypothesis, "\n", sep = "")
   if (!is.null(x$alternative)) cat("Alternative: ", x$alternative, "\n", sep = "")
   cat("Statistic:   ", fmt_num(x$statistic, digits), "  [", label, df, "]\n", sep = "")
+  if (!is.null(x$critical)) {
+    cat("Critical:    ", fmt_num(x$critical, digits), " at ", format(100 * x$alpha),
+        "%\n", sep = "")
+  }
   cat("p-value:     ", fmt_num(x$p.value, digits), "\n", sep = "")
   cat("Decision:    ", if (isTRUE(x$reject_null)) "reject H0" else "do not reject H0",
       " at ", format(100 * x$alpha), "%\n", sep = "")
@@ -85,6 +92,10 @@ print.adltools_test <- function(x, digits = 4, ...) {
     cat("Covariance:  ", cov, "\n", sep = "")
   }
   cat("N:           ", x$nobs, "\n", sep = "")
+  if (!is.null(x$crossing)) {
+    cat("Outside the bounds from: ",
+        if (is.na(x$crossing)) "never" else x$crossing, "\n", sep = "")
+  }
   if (is.data.frame(x$coefficients) && nrow(x$coefficients)) {
     cat("\n")
     tab <- x$coefficients
