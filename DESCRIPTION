@@ -1,7 +1,7 @@
 Package: adltools
 Type: Package
 Title: Teaching-Oriented Tools for Autoregressive Distributed Lag Models
-Version: 0.2.1.9000
+Version: 0.2.2
 Authors@R: person("Miguel A.", "Arranz", email = "maarranz@eco.uc3m.es",
     role = c("aut", "cre"),
     comment = c(ORCID = "0000-0002-5951-2284",
