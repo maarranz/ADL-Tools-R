@@ -13,6 +13,24 @@
   dropped by significance: `contemporaneous = "include"`, `"exclude"` or
   `"both"`. The full path is printed.
 
+## Fixes from the third audit
+
+* `super_exogeneity_test()`: a control whose name coincided with an internal
+  dummy column (e.g. `dummy.1`) was tested in place of the break dummy. The
+  internal names now avoid every column of both regressions. New argument
+  `slopes = TRUE` also interacts the steps with the regressors, because
+  additive dummies can miss a change in a slope.
+* Times (`POSIXct`): a missing minute or hour was accepted as consecutive
+  (the check used dates only). Steps are now checked in seconds, with
+  calendar periods only when every observation has the same clock time
+  (daily data across daylight-saving changes stay regular).
+* Dates of dummies (`super_exogeneity_test()`, `adl_outliers()`) are matched
+  to exactly one row; the tolerance was large enough to match several rows
+  on a seconds grid.
+* `cusumsq_test()`: the decision now follows the Monte Carlo p-value, and
+  the bound is the order statistic that agrees with it; `nsim` must satisfy
+  (nsim + 1) * alpha > 1. Before, a tiny `nsim` could reject with p = 0.5.
+
 # adltools 0.3.0
 
 * Stability tests (ADL3): `recursive_residuals()`, `cusum_test()` and

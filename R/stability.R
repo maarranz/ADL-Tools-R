@@ -156,14 +156,22 @@ cusumsq_test <- function(fit, alpha = 0.05, nsim = 10000) {
     e2 <- stats::rnorm(m)^2
     max(abs(cumsum(e2) / sum(e2) - line))
   }, numeric(1)))
-  c0 <- unname(stats::quantile(sim, 1 - alpha, type = 1))
+  if ((nsim + 1) * alpha <= 1) {
+    stop("`nsim` is too small for `alpha` = ", alpha, ": rejection needs ",
+         "(nsim + 1) * alpha > 1 (e.g. nsim >= ", floor(1 / alpha), ").", call. = FALSE)
+  }
+  # Monte Carlo p-value (1 + #{sim >= stat}) / (nsim + 1); the bound c0 is
+  # the order statistic for which stat > c0 exactly when p < alpha
+  p_mc <- (1 + sum(sim >= stat)) / (nsim + 1)
+  J <- ceiling(alpha * (nsim + 1) - 1) - 1          # largest count with p < alpha
+  c0 <- sort(sim, decreasing = TRUE)[J + 1]
   out <- abs(S - line) > c0
   res <- new_adl_test(list(
     method = "cusumsq",
     null_hypothesis = "constant coefficients and variance (CUSUM of squares)",
     statistic = stat, distribution = "cusumsq",
-    p.value = (1 + sum(sim >= stat)) / (nsim + 1),
-    alpha = alpha, reject_null = stat > c0, nobs = nrow(stats::model.matrix(fit$lm)),
+    p.value = p_mc,
+    alpha = alpha, reject_null = p_mc < alpha, nobs = nrow(stats::model.matrix(fit$lm)),
     critical = c0,
     crossing = if (any(out)) format(rr$index[which(out)[1]]) else NA_character_,
     path = data.frame(index = rr$index, value = S, lower = line - c0,

@@ -225,8 +225,7 @@ build_outlier_result <- function(fit, found, cval, method) {
   names_d <- if (nrow(found)) mapply(tag, found$type, found$pos, USE.NAMES = FALSE) else character(0)
   names_d <- make.unique(c(colnames(dat), names_d), sep = "_")[ncol(dat) + seq_along(names_d)]
   D <- vapply(seq_len(nrow(found)), function(i) {
-    v <- as.numeric(as_index_value(idx[found$pos[i]], didx))
-    pos <- which(abs(as.numeric(didx) - v) < 1e-8 * max(1, abs(v)))
+    pos <- index_position(idx[found$pos[i]], didx)
     if (found$type[i] == "impulse") as.numeric(seq_along(didx) == pos) else
       as.numeric(seq_along(didx) >= pos)
   }, numeric(length(didx)))

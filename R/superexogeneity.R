@@ -17,7 +17,10 @@
 #' 2. **Invariance of the conditional model.** The same dummies are added to
 #'    the ADL equation and tested jointly. Under super exogeneity they are
 #'    insignificant: the conditional model stays constant across the episodes
-#'    that changed the marginal model. This is the main result.
+#'    that changed the marginal model. This is the main result. The additive
+#'    dummies detect shifts in the intercept, and slope changes only through
+#'    the shift they cause in the mean; `slopes = TRUE` adds the
+#'    interactions of the steps with the regressors.
 #' 3. **Weak exogeneity.** \eqn{\kappa = 0} in the marginal regression with
 #'    the dummies (super exogeneity requires it).
 #'
@@ -43,6 +46,12 @@
 #'   only regressor.
 #' @param lags,x_level The marginal regression, as in
 #'   [weak_exogeneity_test()].
+#' @param slopes If `TRUE`, step 2 also interacts each step dummy with every
+#'   regressor of the ADL (except the intercept), so it tests that all the
+#'   coefficients, not only the intercept, are constant across the breaks
+#'   (a Chow-type test at the break dates). The additive dummies alone can
+#'   miss a change in a slope, such as \eqn{\beta_0}, when the regressors
+#'   have mean zero after the break.
 #' @inheritParams adl_vcov
 #' @param dist `"chisq"` (default) or `"F"`.
 #' @param alpha Significance level for the decisions.
@@ -74,7 +83,7 @@
 #' super_exogeneity_test(fit, steps = c(2005, 1))
 #' @export
 super_exogeneity_test <- function(fit, impulses = NULL, steps = NULL, x = NULL,
-                                  lags = 1, x_level = TRUE,
+                                  lags = 1, x_level = TRUE, slopes = FALSE,
                                   cov_type = c("nonrobust", "HAC"),
                                   maxlags = NULL, dist = c("chisq", "F"),
                                   alpha = 0.05) {
@@ -99,18 +108,29 @@ super_exogeneity_test <- function(fit, impulses = NULL, steps = NULL, x = NULL,
   mf <- marginal_frame(fit, x, lags, x_level)
   Dm <- break_dummies(imp, stp, attr(mf, "index"), "the marginal regression")
   dnames <- colnames(Dm)
-  # syntactic internal names (lm would backtick "S(2005 Q1)")
-  dcol_m <- paste0("dummy.", seq_along(dnames))
+  X <- stats::model.matrix(fit$lm)
+  # syntactic internal names (lm would backtick "S(2005 Q1)"), distinct from
+  # every column of both regressions (a control could be called "dummy.1")
+  dcol_m <- fresh_names(".brk", length(dnames), c(names(mf), colnames(X)))
   colnames(Dm) <- dcol_m
   mdat <- cbind(mf, Dm)
   marg <- stats::lm(dx ~ ., data = mdat)
-  # 2. conditional model with the dummies
-  X <- stats::model.matrix(fit$lm)
+  # 2. conditional model with the dummies (and, with slopes, the steps
+  # interacted with the regressors)
   yv <- stats::model.response(stats::model.frame(fit$lm))
-  Dc <- break_dummies(imp, stp, fit$index, "the estimation sample")
+  Dc <- as.matrix(break_dummies(imp, stp, fit$index, "the estimation sample"))
   dcol_c <- dcol_m
-  Xd <- cbind(X, as.matrix(Dc))
-  colnames(Xd) <- c(colnames(X), dcol_c)
+  colnames(Dc) <- dcol_c
+  if (slopes && length(stp)) {
+    regs <- setdiff(colnames(X), "(Intercept)")
+    st <- Dc[, length(imp) + seq_along(stp), drop = FALSE]
+    inter <- do.call(cbind, lapply(seq_len(ncol(st)), function(j) X[, regs, drop = FALSE] * st[, j]))
+    icol <- fresh_names(".slp", ncol(inter), c(colnames(X), dcol_c))
+    colnames(inter) <- icol
+    Dc <- cbind(Dc, inter)
+    dcol_c <- c(dcol_c, icol)
+  }
+  Xd <- cbind(X, Dc)
   cond <- stats::lm(yv ~ 0 + Xd)
   names(cond$coefficients) <- colnames(Xd)
 
@@ -142,7 +162,7 @@ super_exogeneity_test <- function(fit, impulses = NULL, steps = NULL, x = NULL,
              "3. weak exogeneity (kappa = 0)"),
     wanted = c("reject", "do not reject", "do not reject"),
     statistic = c(t_marg$statistic, t_cond$statistic, t_weak$statistic),
-    df = c(length(dnames), length(dnames), 1L),
+    df = c(length(dnames), length(dcol_c), 1L),
     p.value = c(t_marg$p.value, t_cond$p.value, t_weak$p.value)
   )
   steps_tab$reject <- steps_tab$p.value < alpha
@@ -162,10 +182,12 @@ super_exogeneity_test <- function(fit, impulses = NULL, steps = NULL, x = NULL,
     method = "super_exogeneity",
     null_hypothesis = paste0("the ADL for ", fit$y, " is invariant to the breaks ",
                              "in the marginal process of ", x, " (",
-                             length(dnames), if (length(dnames) == 1) " dummy)" else " dummies)"),
+                             length(dnames), if (length(dnames) == 1) " dummy" else " dummies",
+                             if (slopes && length(stp)) ", steps also on the slopes" else "",
+                             ")"),
     alpha = alpha, reject_null = t_cond$p.value < alpha, nobs = stats::nobs(cond),
     cov_type = cov_type, maxlags = t_cond$maxlags,
-    n_restrictions = length(dnames), df_resid = stats::df.residual(cond),
+    n_restrictions = length(dcol_c), df_resid = stats::df.residual(cond),
     coefficients = steps_tab,
     dummies = data.frame(name = dnames,
                          type = rep(c("impulse", "step"), c(length(imp), length(stp))),
@@ -173,6 +195,16 @@ super_exogeneity_test <- function(fit, impulses = NULL, steps = NULL, x = NULL,
                            format(as_index_value(v, fit$index)), character(1))),
     marginal = marg, conditional = cond
   ), t_cond[setdiff(names(t_cond), "maxlags")]), "Super exogeneity test")
+}
+
+#' Names with a prefix that none of `taken` uses
+#' @noRd
+fresh_names <- function(prefix, k, taken) {
+  repeat {
+    nm <- paste0(prefix, seq_len(k))
+    if (!any(nm %in% taken)) return(nm)
+    prefix <- paste0(prefix, "_")
+  }
 }
 
 #' Dates given as one date, a list, or a vector of dates
@@ -189,11 +221,9 @@ split_dates <- function(d, idx) {
 #' Impulse and step dummies on an index
 #' @noRd
 break_dummies <- function(imp, stp, idx, where) {
-  num <- as.numeric(idx)
   pos <- function(v) {
-    val <- as.numeric(as_index_value(v, idx))
-    k <- which(abs(num - val) < 1e-8 * max(1, abs(val)))
-    if (!length(k)) {
+    k <- index_position(as_index_value(v, idx), idx)
+    if (is.na(k)) {
       stop("The date ", format(as_index_value(v, idx)), " is not in ", where,
            " (", format(idx[1]), " - ", format(idx[length(idx)]), ").", call. = FALSE)
     }

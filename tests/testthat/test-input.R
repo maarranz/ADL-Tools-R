@@ -133,3 +133,20 @@ test_that("gaps outside the estimation window do not matter (audit 2)", {
   expect_error(adl(y ~ x, data = d, time = "t", order = c(1, 1),
                    start = as.Date("2000-06-01")), "gaps")
 })
+
+test_that("times: a missing minute is a gap; DST days are regular (audit 3)", {
+  set.seed(44)
+  tt <- as.POSIXct("2026-01-01 10:00:00", tz = "UTC") + 60 * c(0:9, 11:20)
+  d <- data.frame(t = tt, y = rnorm(20), x = rnorm(20))
+  expect_error(adl(y ~ x, data = d, time = "t", order = c(1, 0)),
+               "10:09:00 and 2026-01-01 10:11:00")
+  ok <- data.frame(t = as.POSIXct("2026-01-01 10:00:00", tz = "UTC") + 60 * 0:19,
+                   y = rnorm(20), x = rnorm(20))
+  expect_s3_class(adl(y ~ x, data = ok, time = "t", order = c(1, 0)), "adl")
+  days <- as.POSIXct(format(seq(as.Date("2026-03-15"), by = "day", length.out = 40)),
+                     tz = "Europe/Madrid")                  # spans the DST change
+  dd <- data.frame(t = days, y = rnorm(40), x = rnorm(40))
+  expect_s3_class(adl(y ~ x, data = dd, time = "t", order = c(1, 0)), "adl")
+  dd2 <- dd[-10, ]
+  expect_error(adl(y ~ x, data = dd2, time = "t", order = c(1, 0)), "gaps")
+})

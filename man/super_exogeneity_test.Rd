@@ -11,6 +11,7 @@ super_exogeneity_test(
   x = NULL,
   lags = 1,
   x_level = TRUE,
+  slopes = FALSE,
   cov_type = c("nonrobust", "HAC"),
   maxlags = NULL,
   dist = c("chisq", "F"),
@@ -30,6 +31,13 @@ only regressor.}
 
 \item{lags, x_level}{The marginal regression, as in
 \code{\link[=weak_exogeneity_test]{weak_exogeneity_test()}}.}
+
+\item{slopes}{If \code{TRUE}, step 2 also interacts each step dummy with every
+regressor of the ADL (except the intercept), so it tests that all the
+coefficients, not only the intercept, are constant across the breaks
+(a Chow-type test at the break dates). The additive dummies alone can
+miss a change in a slope, such as \eqn{\beta_0}, when the regressors
+have mean zero after the break.}
 
 \item{cov_type}{\code{"nonrobust"} (conventional OLS, the default) or \code{"HAC"}
 (Newey-West, Bartlett kernel, no prewhitening, no small-sample
@@ -67,7 +75,10 @@ change at these dates, the test has nothing to work with.
 \item \strong{Invariance of the conditional model.} The same dummies are added to
 the ADL equation and tested jointly. Under super exogeneity they are
 insignificant: the conditional model stays constant across the episodes
-that changed the marginal model. This is the main result.
+that changed the marginal model. This is the main result. The additive
+dummies detect shifts in the intercept, and slope changes only through
+the shift they cause in the mean; \code{slopes = TRUE} adds the
+interactions of the steps with the regressors.
 \item \strong{Weak exogeneity.} \eqn{\kappa = 0} in the marginal regression with
 the dummies (super exogeneity requires it).
 }

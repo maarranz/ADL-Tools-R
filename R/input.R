@@ -121,6 +121,19 @@ to_zoo <- function(data, time = NULL) {
   z
 }
 
+#' Row of an index value: the one row within half the smallest step (exact
+#' for dates and times, robust to floating point for ts/yearqtr), or NA
+#' @noRd
+index_position <- function(v, idx) {
+  num <- as.numeric(idx)
+  val <- as.numeric(v)
+  steps <- diff(sort(unique(num)))
+  tol <- if (length(steps) && any(steps > 0)) 1e-6 * min(steps[steps > 0]) else
+    1e-8 * max(1, abs(val))
+  k <- which(abs(num - val) <= tol)
+  if (length(k) == 1) k else NA_integer_
+}
+
 #' Stop if a time index has gaps
 #'
 #' Lags are taken by row, so a missing period would make the "lag" of the
@@ -146,7 +159,17 @@ check_regular <- function(idx) {
     bad_step(as.numeric(idx) * 4, 1)
   } else if (inherits(idx, "yearmon")) {
     bad_step(as.numeric(idx) * 12, 1)
-  } else if (inherits(idx, c("Date", "POSIXt"))) {
+  } else if (inherits(idx, "POSIXt")) {
+    # times: equal steps in seconds (minutes, hours, days); or, when every
+    # observation is at the same clock time, consecutive calendar periods
+    secs <- as.numeric(idx)
+    clock <- format(idx, "%H:%M:%OS6")
+    if (bad_step(secs) == 0L) 0L else if (length(unique(clock)) == 1) {
+      dd <- as.Date(format(idx, "%Y-%m-%d"))
+      # daily or weekly across daylight-saving changes, or calendar periods
+      if (bad_step(as.numeric(dd)) == 0L) 0L else calendar_bad_step(dd)
+    } else bad_step(secs, stats::median(diff(secs)))
+  } else if (inherits(idx, "Date")) {
     dd <- as.Date(idx)
     if (bad_step(as.numeric(dd)) == 0L) 0L else calendar_bad_step(dd)
   } else if (is.numeric(idx)) {

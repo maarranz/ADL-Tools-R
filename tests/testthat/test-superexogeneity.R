@@ -82,3 +82,50 @@ test_that("dates: forms, errors and collinearity", {
                super_exogeneity_test(fit, steps = brk,
                                      impulses = list(c(1980, 1), c(1985, 2)))$statistic)
 })
+
+test_that("a control named like an internal column is not tested (audit 3)", {
+  set.seed(1)
+  n <- 120
+  x <- y <- numeric(n)
+  u <- rnorm(n)
+  for (t in 2:n) {
+    x[t] <- 0.5 * x[t - 1] + 2 * (t >= 61) + rnorm(1)
+    y[t] <- 1 + 0.5 * y[t - 1] + 0.4 * x[t] + 0.3 * x[t - 1] + 3 * u[t] + rnorm(1)
+  }
+  for (nm in c("dummy.1", ".brk1")) {
+    d <- stats::ts(cbind(y = y, x = x, u = u), start = c(1990, 1), frequency = 4)
+    colnames(d)[3] <- nm
+    f <- adl(stats::as.formula(paste0("y ~ x | `", nm, "`")), data = d, order = c(1, 1))
+    s <- super_exogeneity_test(f, steps = c(2005, 1))
+    X <- model.matrix(f$lm)
+    S <- as.numeric(as.numeric(f$index) >= 2005)
+    ref <- summary(lm(model.response(model.frame(f$lm)) ~ 0 + X + S))$coefficients["S", ]
+    expect_equal(s$statistic, unname(ref[3])^2)
+  }
+})
+
+test_that("slopes = TRUE adds step interactions with the regressors (audit 3)", {
+  d <- sim_se(TRUE)
+  fit <- adl(y ~ x, data = d, order = c(1, 1))
+  s <- suppressWarnings(super_exogeneity_test(fit, steps = brk, slopes = TRUE))
+  expect_equal(s$df, 4)                          # step + 3 slope interactions
+  X <- model.matrix(fit$lm)
+  S <- as.numeric(as.numeric(fit$index) >= 1995 - 1e-8)
+  aug <- lm(model.response(model.frame(fit$lm)) ~ 0 + X + S + I(X[, -1] * S))
+  b <- coef(aug)[5:8]
+  expect_equal(s$statistic, as.numeric(t(b) %*% solve(vcov(aug)[5:8, 5:8], b)))
+  expect_match(s$null_hypothesis, "slopes")
+  # impulses only: nothing to interact
+  si <- suppressWarnings(super_exogeneity_test(fit, impulses = brk, slopes = TRUE))
+  expect_equal(si$df, 1)
+})
+
+test_that("dates match exactly one row on a seconds grid (audit 3)", {
+  set.seed(2)
+  tt <- as.POSIXct("2026-01-01 10:00:00", tz = "UTC") + 0:199
+  d <- data.frame(t = tt, y = rnorm(200), x = rnorm(200))
+  f <- adl(y ~ x, data = d, time = "t", order = c(1, 1))
+  s <- suppressWarnings(super_exogeneity_test(f, impulses = tt[100]))
+  expect_equal(sum(s$conditional$model[[2]][, ncol(s$conditional$model[[2]])]), 1)
+  expect_equal(index_position(tt[100], f$index), 99L)
+})

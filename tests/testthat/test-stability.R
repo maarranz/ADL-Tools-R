@@ -98,3 +98,25 @@ test_that("stability plots draw", {
   expect_invisible(plot(cusum_test(fit)))
   expect_invisible(plot(cusumsq_test(fit, nsim = 500)))
 })
+
+test_that("CUSUM of squares: decision agrees with the p-value (audit 3)", {
+  fit <- stab_fit()
+  expect_error(cusumsq_test(fit, nsim = 1), "too small")
+  expect_error(cusumsq_test(fit, nsim = 19), "too small")
+  for (ns in c(20, 39, 99, 500)) for (a in c(0.05, 0.1)) {
+    r <- cusumsq_test(fit, nsim = ns, alpha = a)
+    expect_identical(r$reject_null, r$p.value < a)
+    expect_identical(r$reject_null, r$statistic > r$critical)
+  }
+  # and on a model that does reject
+  set.seed(52)
+  n <- 200
+  x <- rnorm(n)
+  y <- 1 + 0.5 * x + ifelse(seq_len(n) <= 100, 1, 4) * rnorm(n)
+  fv <- adl(y ~ x, data = stats::ts(cbind(y = y, x = x)), order = c(0, 0))
+  for (ns in c(20, 99, 999)) {
+    r <- cusumsq_test(fv, nsim = ns)
+    expect_identical(r$reject_null, r$p.value < 0.05)
+    expect_identical(r$reject_null, r$statistic > r$critical)
+  }
+})
