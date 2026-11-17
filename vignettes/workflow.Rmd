@@ -215,8 +215,22 @@ sim <- function(lucas, seed) {
   }
   ts(cbind(y = y, x = x), start = c(1990, 1), frequency = 4)
 }
-fit_inv <- adl(y ~ x, data = sim(FALSE, 1), order = c(1, 1))
-super_exogeneity_test(fit_inv, steps = c(2005, 1))
+d_inv <- sim(FALSE, 1)
+```
+
+The dates should come from the process of $x$, not from the ADL. Search a
+model for $x$ (its own lag and lagged $y$) for impulses and steps:
+
+```{r}
+breaks_x <- adl_outliers(adl(x ~ y, data = d_inv, order = c(1, 1), first_lag = 1))
+breaks_x
+```
+
+The search finds the step. Its dates go straight into the test:
+
+```{r}
+fit_inv <- adl(y ~ x, data = d_inv, order = c(1, 1))
+super_exogeneity_test(fit_inv, impulses = breaks_x$impulses, steps = breaks_x$steps)
 fit_lucas <- adl(y ~ x, data = sim(TRUE, 2), order = c(1, 1))
 super_exogeneity_test(fit_lucas, steps = c(2005, 1))
 ```
@@ -257,6 +271,7 @@ circle.
 | Stability | `cusum_test()`, `cusumsq_test()`, `hansen_test()`, `chow_break_test()`, `chow_forecast_test()` | ADL3, ADL4 |
 | Restrictions | `adl_joint_test()`, `comfac_test()` | ADL2 |
 | Exogeneity | `weak_exogeneity_test()`, `wu_hausman_test()`, `super_exogeneity_test()` | ADL1, ADL3 |
+| Outliers and breaks | `adl_outliers()` | (beyond the chapters) |
 | Causality | `granger_test()` (see `vignette("granger")`) | ADL3 |
 | Long run, dynamics | `adl_long_run()`, `adl_dynamics()` | ADL2 |
 

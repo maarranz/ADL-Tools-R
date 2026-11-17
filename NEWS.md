@@ -1,3 +1,11 @@
+# adltools 0.3.0.9000
+
+* `adl_outliers()`: impulse and step dummies in the ADL equation, found by a
+  forward-backward search on t-statistics (default) or by indicator
+  saturation with `gets::isat()` (`method = "isat"`), with the tsoutliers
+  critical value (3 to 4, growing with T). Returns the ADL refitted with the
+  dummies, and the dates in the form `super_exogeneity_test()` takes.
+
 # adltools 0.3.0
 
 * Stability tests (ADL3): `recursive_residuals()`, `cusum_test()` and

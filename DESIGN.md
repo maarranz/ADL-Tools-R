@@ -221,19 +221,27 @@ For each regressor x_i:
   by impulse/step dummies (from the outlier/break tools), then those dummies
   tested in the conditional model (Engle and Hendry, 1993).
 
-## 9. Outliers (v0.2.x)
+## 9. Outliers (v0.3.x)
 
-- Types: AO, LS, TC, IO, and outliers in x. Documentation presents AO and LS
-  first; IO and outliers in x as advanced.
-- In an ADL an unlagged dummy passes through 1/C(L): an AO dummy alone acts
-  as an IO; an LS dummy gives a gradual shift; a genuine AO in y needs the
-  dummy and its lags up to p. Option to lag intervention columns.
-- An IO in an ADL(1, q) behaves like a TC with δ = α₁: the output says which
-  competing type came close.
-- Candidate engine: `gets::isat()` (impulse/step indicator saturation), to be
-  checked; otherwise a Chen–Liu-type search adapted to OLS.
-- Output in the arimatools format, so detected outliers go straight back into
-  `y ~ x | X` and `extend_interventions()`.
+Decided 2026-11-17:
+
+- `adl_outliers(fit, types, cval, method)`: impulse and step dummies **in the
+  ADL equation** (as `gets::isat()` and `super_exogeneity_test()`), not
+  outlier types defined on y. An equation impulse is an innovation outlier;
+  a step shifts the intercept, so y moves gradually to a new level. An AO in
+  y shows as an impulse at τ and a smaller opposite one at τ+1; an immediate
+  LS in y as a step plus an impulse. Documented in the help page.
+- Engines: own forward-backward search on t-statistics (default; Chen-Liu
+  type adapted to OLS, transparent for teaching) and `gets::isat()` (IIS/SIS)
+  as `method = "isat"`, `gets` in Suggests.
+- Critical value: the tsoutliers rule (3 for T <= 50, 4 for T >= 450,
+  3 + 0.0025(T - 50) in between); isat uses the matching two-sided p-value.
+- Output: the refitted ADL (dummies as unlagged regressors, named
+  `I_2005Q1`, `S_2005Q1`), and the dates as lists for
+  `super_exogeneity_test(impulses =, steps =)`.
+- Not done: arimatools-format names (AO/LS), lagged intervention columns,
+  outliers in x as a separate type, pure AR models (adl() needs a regressor;
+  use `adl(x ~ y, first_lag = 1)` for the marginal model).
 
 ## 10. Automatic modelling (Gets)
 
@@ -324,8 +332,7 @@ class → inference → Granger → tidy/glance → vignette and data → releas
 | `R/chow.R` | `chow_break_test()` (dummy interactions, HAC possible); `chow_forecast_test()` static (dummy-variable regression = exact Ω̂ form) and dynamic (Ω̂ from ψ-weights of 1/C(L), general p) |
 | `R/comfac.R` | `comfac_test(fit, r, method)`: restricted model parametrized by (c, φ, δ_i, ω), mapped to unrestricted coefficients by polynomial multiplication, RSS minimized with `optim()` on the same design matrix (same sample by construction); start values from the roots of Ĉ(L) |
 
-Outlier detection moves to **v0.2.x** (depends on the `gets::isat()`
-decision).
+Outlier detection: `adl_outliers()` (section 9).
 
 **Testing.** Development tests run in a Linux R installation in the
 assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
@@ -353,8 +360,8 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 - **v0.3.0** (released 2026-11-17) — stability without a break date
   (`recursive_residuals()`, `cusum_test()`, `cusumsq_test()` with plots,
   `hansen_test()` per parameter and joint); `super_exogeneity_test()`.
-- **v0.4** — outlier detection (pending the critical-value question; it can
-  supply the dates for `super_exogeneity_test()`), `adl_gets()` tier 1, and
+- **v0.4** — outlier detection (`adl_outliers()`, done in 0.3.0.9000),
+  `adl_gets()` tier 1, and
   automatic lag selection in `granger_test_general()` (same engine; the
   argument exists from v0.1.0 and stops with "not yet implemented").
 - **Later** — J-test with the four-outcome reading; standard errors for
@@ -369,7 +376,7 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 1. Test data: simulated DGPs for unit tests; which real dataset to
    cross-check against EViews?
 2. ECM view: `adl_ecm(fit)` or a `form` argument.
-3. Outlier critical values: fixed (3–3.5) or IIS-style levels tied to T.
+3. ~~Outlier critical values~~: decided, the tsoutliers rule (section 9).
 4. Granger with several regressors: conditioning set and output format.
 
 ## 16. References (checked against publisher or RePEc records, Nov 2026)

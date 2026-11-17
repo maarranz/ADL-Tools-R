@@ -4,7 +4,7 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: version 0.3.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super). Outlier detection and general-to-specific modelling come next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.3.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super), and outlier and break detection. General-to-specific modelling comes next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 
@@ -20,6 +20,7 @@ Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, d
 | Diagnostics | `adl_diagnostics()`, `bg_test()` (Breusch–Godfrey), `arch_test()` (ARCH-LM), `reset_test()` (RESET), `jb_test()` (Jarque–Bera) |
 | Stability | `cusum_test()`, `cusumsq_test()` (with plots), `hansen_test()` (per parameter, no break date), `chow_break_test()`, `chow_forecast_test()` (static 1-step or dynamic N-step) |
 | Common factors | `comfac_test()`: COMFAC of any order (LR), and the ADL(1,1) Wald form of the chapters |
+| Outliers and breaks | `adl_outliers()` (impulse and step dummies; own search or `gets::isat()`) |
 | Exogeneity | `wu_hausman_test()` (predeterminedness), `weak_exogeneity_test()` (weak, and strong with `strong = TRUE`), `super_exogeneity_test()` (invariance to breaks in the marginal process) |
 | Existing fits | `as_adl()` converts a `dynlm` fit |
 | Output | `print()`, `plot()`, `tidy()`, `glance()` |

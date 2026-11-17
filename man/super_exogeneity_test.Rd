@@ -78,9 +78,10 @@ same dates, invariance, and any policy simulation built on the model, is
 not credible. If the marginal model shows no break, not rejecting
 invariance is uninformative, and the function warns.
 
-The dates are a modelling choice: find them with the stability tests on
-the marginal model (e.g. \code{\link[=hansen_test]{hansen_test()}} or \code{\link[=cusum_test]{cusum_test()}} on an ADL for
-\eqn{x}, or \code{\link[=chow_break_test]{chow_break_test()}}), from the history of the policy, or from
+The dates are a modelling choice: find them on a model for \eqn{x} with
+\code{\link[=adl_outliers]{adl_outliers()}} (whose \verb{$impulses} and \verb{$steps} can be passed on
+directly), with the stability tests (\code{\link[=hansen_test]{hansen_test()}}, \code{\link[=cusum_test]{cusum_test()}},
+\code{\link[=chow_break_test]{chow_break_test()}}), from the history of the policy, or from
 the residuals of the marginal regression. Dates chosen by looking at the
 conditional model would bias the test towards invariance.
 }
@@ -109,5 +110,5 @@ Lucas, R. E. (1976). Econometric policy evaluation: a critique.
 \emph{Carnegie-Rochester Conference Series on Public Policy}, 1, 19-46.
 }
 \seealso{
-\code{\link[=weak_exogeneity_test]{weak_exogeneity_test()}}, \code{\link[=hansen_test]{hansen_test()}}, \code{\link[=chow_break_test]{chow_break_test()}}
+\code{\link[=adl_outliers]{adl_outliers()}}, \code{\link[=weak_exogeneity_test]{weak_exogeneity_test()}}, \code{\link[=hansen_test]{hansen_test()}}
 }

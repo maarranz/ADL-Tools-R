@@ -27,9 +27,10 @@
 #' not credible. If the marginal model shows no break, not rejecting
 #' invariance is uninformative, and the function warns.
 #'
-#' The dates are a modelling choice: find them with the stability tests on
-#' the marginal model (e.g. [hansen_test()] or [cusum_test()] on an ADL for
-#' \eqn{x}, or [chow_break_test()]), from the history of the policy, or from
+#' The dates are a modelling choice: find them on a model for \eqn{x} with
+#' [adl_outliers()] (whose `$impulses` and `$steps` can be passed on
+#' directly), with the stability tests ([hansen_test()], [cusum_test()],
+#' [chow_break_test()]), from the history of the policy, or from
 #' the residuals of the marginal regression. Dates chosen by looking at the
 #' conditional model would bias the test towards invariance.
 #'
@@ -58,7 +59,7 @@
 #'
 #'   Lucas, R. E. (1976). Econometric policy evaluation: a critique.
 #'   *Carnegie-Rochester Conference Series on Public Policy*, 1, 19-46.
-#' @seealso [weak_exogeneity_test()], [hansen_test()], [chow_break_test()]
+#' @seealso [adl_outliers()], [weak_exogeneity_test()], [hansen_test()]
 #' @examples
 #' # x shifts its mean in 2005 Q1; y given x is unchanged
 #' set.seed(1)
