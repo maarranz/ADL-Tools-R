@@ -4,7 +4,7 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: version 0.2.2.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super). Outlier detection and general-to-specific modelling come next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.3.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality, residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super). Outlier detection and general-to-specific modelling come next. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 

@@ -1,4 +1,4 @@
-# adltools 0.2.2.9000
+# adltools 0.3.0
 
 * Stability tests (ADL3): `recursive_residuals()`, `cusum_test()` and
   `cusumsq_test()` (Brown, Durbin and Evans, 1975), with `plot()` methods

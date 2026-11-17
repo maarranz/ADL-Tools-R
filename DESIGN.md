@@ -344,17 +344,23 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 - **v0.2.0** (released 2026-11-16) — diagnostics (BG, ARCH, RESET, JB), Chow breakpoint,
   `chow_forecast_test()` (static and dynamic), `comfac_test()` (LR, and Wald
   for the ADL(1,1)).
-- **v0.2.x** — accept existing `dynlm` fits (`as_adl()`); workflow vignette;
-  `DESIGN.md` roadmap kept current.
-- **v0.2.x / v0.3** — outlier detection (pending the critical-value question).
-- **v0.3** — exogeneity (`wu_hausman_test()` and `weak_exogeneity_test()` with
-  strong exogeneity started in 0.2.x; `super_exogeneity_test()`), `adl_gets()` tier 1, and
+- **v0.2.1** (released 2026-11-16) — `as_adl()` for existing `dynlm` fits;
+  `start`/`end` as in dynlm/EViews; exogeneity (`wu_hausman_test()`,
+  `weak_exogeneity_test()` with strong exogeneity); fixes from the first
+  audit; R >= 4.2.
+- **v0.2.2** (released 2026-11-17) — workflow vignette; fixes from the
+  second audit.
+- **v0.3.0** (released 2026-11-17) — stability without a break date
+  (`recursive_residuals()`, `cusum_test()`, `cusumsq_test()` with plots,
+  `hansen_test()` per parameter and joint); `super_exogeneity_test()`.
+- **v0.4** — outlier detection (pending the critical-value question; it can
+  supply the dates for `super_exogeneity_test()`), `adl_gets()` tier 1, and
   automatic lag selection in `granger_test_general()` (same engine; the
   argument exists from v0.1.0 and stops with "not yet implemented").
-- **Later** — Hansen (1992) per coefficient; J-test with the four-outcome
-  reading; standard errors for dynamic multipliers and lags; ECM view;
-  dynamic forecasts with ψ-weight variance and fan charts; Sargan's general
-  COMFAC Wald; `gets` adapter (tier 2); Granger with conditioning variables.
+- **Later** — J-test with the four-outcome reading; standard errors for
+  dynamic multipliers and lags; ECM view; dynamic forecasts with ψ-weight
+  variance and fan charts; Sargan's general COMFAC Wald; `gets` adapter
+  (tier 2); Granger with conditioning variables.
 - **Elsewhere** — forecastingtools: `static_forecast()` for ADL fits and the
   `scheme` argument.
 
