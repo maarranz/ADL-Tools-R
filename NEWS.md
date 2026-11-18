@@ -1,3 +1,23 @@
+# adltools 0.7.2
+
+Fixes from the verification of the 0.7.1 corrections (V1-V4).
+
+* Time indexes (V1): the tolerance for regular steps now allows only for
+  the resolution of the stored values (about 4 x machine epsilon x the
+  largest value) and is never more than a quarter of the step, so a
+  missing period is always detected. Steps too fine to be told apart from
+  rounding at their magnitude (e.g. 1 microsecond for dates in the 2020s)
+  are refused with a message instead of being accepted. Dates of the data
+  are matched exactly first.
+* `adl_getsm()`, `adl_outliers()` (V3): refitted formulas are built from
+  symbols, so names with backslashes keep their identity.
+* `adl_forecast()` (V4): undated `newdata` follows the calendar when the
+  data are consecutive months, quarters or years (31 December stays
+  31 December across leap years), and a fixed number of days otherwise;
+  for any other spacing it asks for dated `newdata`.
+* `adl_forecast()` (V2): confidence levels so close that their columns
+  would coincide are refused.
+
 # adltools 0.7.1
 
 Fixes from the fourth external audit (2026-11-18).

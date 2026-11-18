@@ -127,15 +127,26 @@ to_zoo <- function(data, time = NULL) {
 index_position <- function(v, idx) {
   num <- as.numeric(idx)
   val <- as.numeric(v)
+  # an index value taken from the data matches exactly
+  k <- which(num == val)
+  if (length(k) == 1) return(k)
   steps <- diff(sort(unique(num)))
-  # a fraction of the spacing, but never below the floating-point resolution
-  # of the values themselves (epoch seconds with sub-second steps)
-  res <- 64 * .Machine$double.eps * max(abs(c(num, val)))
-  tol <- if (length(steps) && any(steps > 0)) max(1e-6 * min(steps[steps > 0]), res) else
-    max(1e-8 * max(1, abs(val)), res)
+  step <- if (length(steps) && any(steps > 0)) min(steps[steps > 0]) else NA_real_
+  # otherwise: a small fraction of the spacing, allowing for the resolution
+  # of the stored values, but always below a quarter of the spacing, so that
+  # a value can never match a neighbouring period
+  res <- time_resolution(c(num, val))
+  tol <- if (is.na(step)) max(1e-8 * max(1, abs(val)), res) else
+    min(max(1e-6 * step, res), step / 4)
   k <- which(abs(num - val) <= tol)
   if (length(k) == 1) k else NA_integer_
 }
+
+#' Rounding error of a difference of two stored values: the spacing of
+#' doubles near the largest one (with a margin of 4), e.g. about 1.4e-6
+#' seconds for date-times in the 2020s
+#' @noRd
+time_resolution <- function(v) 4 * .Machine$double.eps * max(abs(v), 1)
 
 #' Stop if a time index has gaps
 #'
@@ -154,10 +165,18 @@ check_regular <- function(idx) {
   bad_step <- function(v, step = NULL) {
     d <- diff(v)
     step <- step %||% d[1]
-    # differences of large numbers (epoch seconds) carry rounding of the
-    # order of their last digit: allow for it, far below any real gap
-    tol <- max(1e-8 * max(1, abs(step)),
-               64 * .Machine$double.eps * max(abs(v)))
+    # differences of large numbers (epoch seconds) are exact only up to the
+    # resolution of the stored values; the tolerance allows for that but is
+    # bounded by a quarter of the step, so a missing period (a doubled step)
+    # is always detected. Steps too small for that are refused.
+    res <- time_resolution(v)
+    if (res > abs(step) / 4) {
+      stop("The time stamps are too fine for their magnitude: a step of ",
+           format(signif(abs(step), 3)), " cannot be told apart from rounding ",
+           "(resolution about ", format(signif(res, 2)), "). Use a coarser ",
+           "unit or a numeric index (e.g. observation numbers).", call. = FALSE)
+    }
+    tol <- min(max(1e-8 * max(1, abs(step)), res), abs(step) / 4)
     k <- which(abs(d - step) >= tol)
     if (length(k)) k[1] else 0L
   }

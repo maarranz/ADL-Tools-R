@@ -24,7 +24,12 @@ end of the data: any data type accepted by \code{\link[=adl]{adl()}}. With a tim
 the same kind as the data, its rows after the end of the data are used
 (so the full data set, extended with the scenario, can be passed);
 without one (a data frame with no time column), its rows are taken as
-the periods that follow the data, in order. If it contains the dependent
+the periods that follow the data, in order. Their dates follow the
+calendar when the data are consecutive months, quarters or years (a
+month end stays a month end, 31 December stays 31 December, a day
+capped in short months stays capped), and a fixed number of days
+otherwise (daily or weekly data); for any other convention give
+\code{newdata} with dates. If it contains the dependent
 variable, those values are reported as the actual outcomes.}
 
 \item{origin}{Forecast origin: the last observation used, in the units

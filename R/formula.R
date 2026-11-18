@@ -149,12 +149,13 @@ adl_label <- function(lags) {
   "ADL (general lag sets)"
 }
 
-#' Build `y ~ x1 + x2 | u1 + u2` from variable names, quoting each name so
-#' that non-syntactic names (e.g. `my x`) survive the round trip
+#' Build `y ~ x1 + x2 | u1 + u2` from variable names, as language objects
+#' (symbols), so that any name -- spaces, backticks, backslashes -- keeps
+#' its identity (no text is parsed)
 #' @noRd
 adl_formula <- function(y, x, unlagged = character(0)) {
-  bq <- function(v) paste0("`", gsub("`", "\\\\`", v), "`")
-  rhs <- if (length(x)) paste(bq(x), collapse = " + ") else "1"
-  if (length(unlagged)) rhs <- paste(rhs, "|", paste(bq(unlagged), collapse = " + "))
-  stats::as.formula(paste(bq(y), "~", rhs), env = globalenv())
+  plus <- function(v) Reduce(function(a, b) call("+", a, b), lapply(v, as.name))
+  rhs <- if (length(x)) plus(x) else 1
+  if (length(unlagged)) rhs <- call("|", rhs, plus(unlagged))
+  stats::as.formula(call("~", as.name(y), rhs), env = globalenv())
 }

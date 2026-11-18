@@ -43,7 +43,12 @@
 #'   the same kind as the data, its rows after the end of the data are used
 #'   (so the full data set, extended with the scenario, can be passed);
 #'   without one (a data frame with no time column), its rows are taken as
-#'   the periods that follow the data, in order. If it contains the dependent
+#'   the periods that follow the data, in order. Their dates follow the
+#'   calendar when the data are consecutive months, quarters or years (a
+#'   month end stays a month end, 31 December stays 31 December, a day
+#'   capped in short months stays capped), and a fixed number of days
+#'   otherwise (daily or weekly data); for any other convention give
+#'   `newdata` with dates. If it contains the dependent
 #'   variable, those values are reported as the actual outcomes.
 #' @param origin Forecast origin: the last observation used, in the units
 #'   of the time index (e.g. `c(2016, 4)` for quarterly data). By default
@@ -82,6 +87,12 @@ adl_forecast <- function(fit, h = NULL, newdata = NULL, origin = NULL,
     stop("`level` must contain numbers strictly between 0 and 1.", call. = FALSE)
   }
   level <- sort(unique(level))
+  tags <- level_tag(level)
+  if (anyDuplicated(tags)) {
+    stop("`level` contains values too close to tell apart (",
+         paste(level[duplicated(tags) | duplicated(tags, fromLast = TRUE)],
+               collapse = ", "), "): give distinct levels.", call. = FALSE)
+  }
   vars <- c(fit$y, fit$x, fit$unlagged)
   z <- fit$data[, vars, drop = FALSE]
   idx <- zoo::index(z)
@@ -238,18 +249,28 @@ next_index <- function(idx, k) {
          "`newdata` with dates.", call. = FALSE)
   }
   if (inherits(idx, "Date")) {
+    # calendar convention first: consecutive months, quarters or years (as
+    # accepted by the validation) are extended in calendar periods, so 31
+    # December stays 31 December across leap years and a capped day stays
+    # capped; only otherwise a fixed number of days (daily, weekly data)
+    mon <- as.integer(format(idx, "%Y")) * 12L + as.integer(format(idx, "%m"))
+    msteps <- unique(diff(mon))
+    if (length(msteps) == 1 && msteps %in% c(1L, 3L, 12L) &&
+        calendar_bad_step(as.Date(idx)) == 0L) {
+      ym <- zoo::as.yearmon(last) + msteps * seq_len(k) / 12
+      month_end <- all(zoo::as.Date(zoo::as.yearmon(idx), frac = 1) == idx)
+      if (month_end) return(zoo::as.Date(ym, frac = 1))
+      # the day of the month, capped at the end of short months (the 30th
+      # is the 28th in February), as accepted when the data were validated
+      anchor <- max(as.integer(format(idx, "%d")))
+      mlen <- as.integer(format(zoo::as.Date(ym, frac = 1), "%d"))
+      return(zoo::as.Date(ym) + (pmin(anchor, mlen) - 1L))
+    }
     d <- as.numeric(diff(idx))
     if (length(unique(d)) == 1) return(last + d[1] * seq_len(k))
-    mon <- as.integer(format(idx, "%Y")) * 12L + as.integer(format(idx, "%m"))
-    step <- stats::median(diff(mon))
-    ym <- zoo::as.yearmon(last) + step * seq_len(k) / 12
-    month_end <- all(zoo::as.Date(zoo::as.yearmon(idx), frac = 1) == idx)
-    if (month_end) return(zoo::as.Date(ym, frac = 1))
-    # the day of the month, capped at the end of short months (the 30th is
-    # the 28th in February), as accepted when the data were validated
-    anchor <- max(as.integer(format(idx, "%d")))
-    mlen <- as.integer(format(zoo::as.Date(ym, frac = 1), "%d"))
-    return(zoo::as.Date(ym) + (pmin(anchor, mlen) - 1L))
+    stop("Cannot tell how to extend these dates (neither calendar months, ",
+         "quarters or years nor a fixed number of days): give `newdata` ",
+         "with dates.", call. = FALSE)
   }
   if (inherits(idx, "POSIXt")) {
     stop("Give `newdata` with times for data indexed by date-times.", call. = FALSE)
