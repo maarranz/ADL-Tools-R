@@ -106,6 +106,7 @@ glance.granger_test <- function(x, ...) {
     symbol = paste(cl$symbol, collapse = " or "),
     description = paste(cl$description, collapse = " or "),
     ambiguous = cl$ambiguous,
+    conditioning = paste(x$conditioning, collapse = ", "),
     dist = x$dist, alpha = x$alpha, cov_type = x$cov_type, maxlags = x$maxlags,
     nobs = x$nobs, start = x$sample[1], end = x$sample[2]
   )
@@ -156,4 +157,17 @@ glance.j_test <- function(x, ...) {
              alpha = x$alpha, dist = x$dist, cov_type = x$cov_type,
              maxlags = x$maxlags, nobs = x$nobs, start = x$sample[1],
              end = x$sample[2])
+}
+
+#' @rdname adltools_tidiers
+#' @export
+tidy.adl_forecast <- function(x, ...) {
+  x$forecasts
+}
+
+#' @rdname adltools_tidiers
+#' @export
+glance.adl_forecast <- function(x, ...) {
+  data.frame(y = x$y, model = x$label, origin = format(x$origin),
+             h = nrow(x$forecasts), sigma = x$sigma, in_sample = x$in_sample)
 }

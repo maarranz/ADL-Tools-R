@@ -156,3 +156,82 @@ test_that("select: inst_orders kept if given; argument errors", {
   expect_error(granger_test_general("y", "x", data = adl_sim, select = "bic",
                                     max_order = 0), ">= 1")
 })
+
+# Conditioning variables ------------------------------------------------------
+
+cond_data <- function(n = 250, seed = 51) {
+  set.seed(seed)
+  z <- as.numeric(stats::arima.sim(list(ar = 0.5), n))
+  w <- rnorm(n)
+  x <- c(0, z[-n]) + rnorm(n)
+  y <- c(0, 0, z[-c(n - 1, n)]) + 0.3 * c(0, w[-n]) + rnorm(n)
+  stats::ts(cbind(y = y, x = x, z = z, w = w))
+}
+
+test_that("the formula interface without conditioning equals the names", {
+  d <- cond_data()
+  a <- granger_test("y", "x", p = 2, data = d)
+  b <- granger_test(y ~ x, p = 2, data = d)
+  b2 <- granger_test(y ~ x, 2, data = d)
+  expect_equal(a$tests, b$tests)
+  expect_equal(a$tests, b2$tests)
+  expect_length(b$conditioning, 0)
+  g <- granger_test_general(y ~ x, orders = list(y = c(1, 2), x = c(2, 1)), data = d)
+  g2 <- granger_test_general("y", "x", data = d, orders = list(y = c(1, 2), x = c(2, 1)))
+  expect_equal(g$tests, g2$tests)
+})
+
+test_that("conditioning: the F statistics of the restricted regressions", {
+  d <- cond_data()
+  g <- granger_test(y ~ x | z + w, p = 2, data = d, cond_lags = 3)
+  expect_equal(g$conditioning, c("z", "w"))
+  expect_equal(g$nobs, nrow(d) - 3)
+  # model 1 written out on the common sample
+  L <- function(v, k) stats::lag(d[, v], -k)
+  m <- stats::ts.intersect(y = d[, "y"], y1 = L("y", 1), y2 = L("y", 2),
+                           x1 = L("x", 1), x2 = L("x", 2),
+                           z1 = L("z", 1), z2 = L("z", 2), z3 = L("z", 3),
+                           w1 = L("w", 1), w2 = L("w", 2), w3 = L("w", 3))
+  m <- as.data.frame(m)
+  u <- lm(y ~ ., data = m)
+  r <- lm(y ~ . - x1 - x2, data = m)
+  expect_equal(g$tests$F[1], anova(r, u)$F[2])
+  # z and w lags are in all four models, never z_t
+  for (k in 1:4) {
+    cn <- names(coef(g$models[[k]]))
+    expect_true(all(c("z_lag1", "z_lag3", "w_lag1", "w_lag3") %in% cn))
+    expect_false(any(c("z", "w") %in% cn))
+  }
+  # same conditioning set: the instantaneous tests coincide when s = r
+  expect_equal(g$tests$chisq[3], g$tests$chisq[4])
+})
+
+test_that("a common cause: apparent causality disappears given z", {
+  d <- cond_data(n = 400)
+  expect_true(granger_test(y ~ x, p = 2, data = d)$tests$reject_null[1])
+  gz <- granger_test(y ~ x | z, p = 2, data = d)
+  expect_false(gz$tests$reject_null[1])
+  out <- capture.output(print(gz))
+  expect_true(any(grepl("Conditioning: lags 1-2 of z", out)))
+  expect_true(any(grepl("conditional on the past of z", out)))
+  expect_equal(glance(gz)$conditioning, "z")
+})
+
+test_that("general orders with conditioning, and argument checks", {
+  d <- cond_data()
+  g <- granger_test_general(y ~ x | z, orders = list(y = c(1, 3), x = c(2, 1)),
+                            data = d)
+  expect_equal(g$cond_lags, 3L)
+  expect_equal(g$nobs, nrow(d) - 3)
+  g1 <- granger_test_general(y ~ x | z, orders = list(y = c(1, 3), x = c(2, 1)),
+                             data = d, cond_lags = 1)
+  expect_false("z_lag2" %in% names(coef(g1$models[[1]])))
+  expect_error(granger_test_general(y ~ x | z, data = d, select = "bic"),
+               "not available with conditioning")
+  expect_error(granger_test(y ~ x | y, p = 2, data = d), "must differ")
+  expect_error(granger_test(y ~ x | z + z, p = 2, data = d), "must differ")
+  expect_error(granger_test(y ~ x | z, p = 2), "needs `data`")
+  expect_error(granger_test(y ~ x + w, p = 2, data = d), "single variables")
+  expect_error(granger_test(y ~ x | z, p = 2, data = d, cond_lags = 0), "cond_lags")
+  expect_error(granger_test(y ~ x | q, p = 2, data = d), "not found")
+})

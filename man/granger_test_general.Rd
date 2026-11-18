@@ -18,12 +18,15 @@ granger_test_general(
   time = NULL,
   start = NULL,
   end = NULL,
-  max_order = NULL
+  max_order = NULL,
+  cond_lags = NULL
 )
 }
 \arguments{
 \item{y, x}{Column names in \code{data}, or, when \code{data} is \code{NULL}, the two
-series themselves (numeric vectors, \code{ts} or \code{zoo}).}
+series themselves (numeric vectors, \code{ts} or \code{zoo}). Alternatively, \code{y}
+can be a formula \code{y ~ x}, or \code{y ~ x | z1 + z2} to condition on other
+variables (see \strong{Conditioning variables}); then \code{x} is not given.}
 
 \item{orders}{Named list with the orders of the two Granger regressions:
 \code{y = c(s, r)} for the equation of \code{y} (model 1) and \code{x = c(s, r)} for
@@ -34,7 +37,8 @@ the equation of \code{x} (model 2).}
 contemporaneous term is added to these.}
 
 \item{data}{Optional data (\code{ts}, \code{zoo}/\code{xts}, data frame, tibble or
-tsibble) containing \code{y} and \code{x}.}
+tsibble) containing \code{y} and \code{x} (and the conditioning variables);
+required with a formula.}
 
 \item{alpha}{Significance level for the decisions.}
 
@@ -78,6 +82,10 @@ first \code{max_lag} observations of the data are the initial values.}
 
 \item{max_order}{Largest lag considered when \code{select} is used. By default
 4 for quarterly, 12 for monthly and 2 for other data.}
+
+\item{cond_lags}{Number of lags \eqn{1, \dots, k} of each conditioning
+variable in every model; by default \code{p} (in \code{\link[=granger_test_general]{granger_test_general()}},
+the largest of the orders).}
 }
 \value{
 An object of class \code{"granger_test"}; see \code{\link[=granger_test]{granger_test()}}.

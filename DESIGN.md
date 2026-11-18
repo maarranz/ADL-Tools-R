@@ -131,6 +131,15 @@ be significant because of the bias. The choice is the user's, as in ADL3.
   (taxonomy restrictions, Gets steps).
 - `adl_long_run(fit)`: k₀ and k_i for every regressor, with delta-method
   standard errors.
+- `adl_forecast(fit, h, newdata, origin, level)` (v0.6.0): iterated
+  forecasts row by row of the design (y lags replaced by forecasts; x, the
+  unlagged terms and the trend from the data or `newdata`). Var e_h =
+  σ² Σ_{i<h} ψ_i², ψ from 1/C(L); no parameter or x uncertainty (Lütkepohl
+  §3.5 later). `newdata` dated (same index kind; rows after the data) or
+  undated (rows follow the data; `next_index()` extends ts, yearqtr,
+  yearmon, numeric and monthly/quarterly/daily dates). Origin inside the
+  sample = in-sample dynamic simulation, flagged. Fan chart in base
+  graphics, bands joined to the last observation.
 - `j_test(fit_a, fit_b)` (v0.5.0): both directions on the common sample
   (dates matched), same dependent variable checked by value; `adl` or
   `dynlm` fits (a pure AR(1) is not an `adl`); refuses nested pairs (rank of
@@ -188,8 +197,11 @@ Follows the direct (Sargent, 1976) procedure of ADL3, not
   result; with HAC the two instantaneous statistics differ (stated in ADL3).
 - **Classification**: one of the eight causal types, with symbol and wording
   from ADL3; flagged as ambiguous when the two instantaneous tests disagree.
-- **Scope**: bivariate for now; conditioning on other regressors (third
-  variables) later.
+- **Conditioning** (v0.6.0): `y ~ x | z1 + z2`; lags 1..`cond_lags`
+  (default p, or the largest order) of every z in all four models, no z_t;
+  output as before, with the classification labelled as conditional on
+  the z's. Not with `select` (the IC grid would also range over the z
+  lags).
 - Stationarity assumed; stated in the documentation and one printed line.
 - Validation: F equal to `lmtest::grangertest()` on the same sample;
   simulated bivariate VARs for each causal type.
@@ -371,6 +383,13 @@ Outlier detection: `adl_outliers()` (section 9).
 | `R/ecm.R` | `adl_ecm()`: ECM = Aθ + c, exact covariance A V Aᵀ; equilibrium-error form and the equilibrium error |
 | `R/jtest.R` | `j_test()`: both directions on the common sample; `adl` or `dynlm` fits; nesting check |
 
+**v0.6.0 files**
+
+| File | Contents |
+|:--|:--|
+| `R/forecast.R` | `adl_forecast()`, `next_index()` (extends a regular index), print and fan-chart plot |
+| `R/granger.R` | formula interface and conditioning variables (`parse_granger_formula()`, `cond_lags`) |
+
 **Testing.** Development tests run in a Linux R installation in the
 assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 
@@ -404,10 +423,10 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 - **v0.5.0** (released 2026-11-18) — standard errors in `adl_dynamics()`
   (delta method; simulated interval for the median lag); `adl_ecm()`;
   `j_test()`.
-- **Next** — v0.6.0: dynamic forecasts with ψ-weight variance (no
-  parameter uncertainty) and fan charts; Granger with conditioning
-  variables (`y ~ x | z`). v0.7.0: Sargan's general COMFAC Wald; `gets`
-  adapter (tier 2).
+- **v0.6.0** (released 2026-11-18) — `adl_forecast()` (dynamic forecasts
+  on a known path of x, ψ-weight variance, fan charts); Granger with
+  conditioning variables (`y ~ x | z`) and a formula interface.
+- **Next** — v0.7.0: Sargan's general COMFAC Wald; `gets` adapter (tier 2).
 - **Later** — parameter uncertainty in forecast variances (Lütkepohl
   2005, section 3.5).
 - **Elsewhere** — forecastingtools: `static_forecast()` for ADL fits and the
@@ -419,7 +438,7 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
    cross-check against EViews?
 2. ~~ECM view~~: decided, `adl_ecm(fit)` (v0.5.0).
 3. ~~Outlier critical values~~: decided, the tsoutliers rule (section 9).
-4. Granger with several regressors: conditioning set and output format.
+4. ~~Granger with several regressors~~: decided, `y ~ x | z` (v0.6.0).
 
 ## 16. References (checked against publisher or RePEc records, Nov 2026)
 

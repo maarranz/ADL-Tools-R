@@ -15,17 +15,21 @@ granger_test(
   maxlags = NULL,
   time = NULL,
   start = NULL,
-  end = NULL
+  end = NULL,
+  cond_lags = p
 )
 }
 \arguments{
 \item{y, x}{Column names in \code{data}, or, when \code{data} is \code{NULL}, the two
-series themselves (numeric vectors, \code{ts} or \code{zoo}).}
+series themselves (numeric vectors, \code{ts} or \code{zoo}). Alternatively, \code{y}
+can be a formula \code{y ~ x}, or \code{y ~ x | z1 + z2} to condition on other
+variables (see \strong{Conditioning variables}); then \code{x} is not given.}
 
 \item{p}{Lag order used in all four models.}
 
 \item{data}{Optional data (\code{ts}, \code{zoo}/\code{xts}, data frame, tibble or
-tsibble) containing \code{y} and \code{x}.}
+tsibble) containing \code{y} and \code{x} (and the conditioning variables);
+required with a formula.}
 
 \item{alpha}{Significance level for the decisions.}
 
@@ -48,12 +52,17 @@ automatically when there is a single date column.}
 \code{start} is the first observation estimated; the lags use the
 observations before it, as in \code{dynlm} and EViews. Without \code{start}, the
 first \code{max_lag} observations of the data are the initial values.}
+
+\item{cond_lags}{Number of lags \eqn{1, \dots, k} of each conditioning
+variable in every model; by default \code{p} (in \code{\link[=granger_test_general]{granger_test_general()}},
+the largest of the orders).}
 }
 \value{
 An object of class \code{"granger_test"}: a list with \code{tests} (a data
 frame with one row per model), \code{classification} (type number 1-8,
 symbol, description and the \code{ambiguous} flag), \code{models} (the four
-\code{"adl"} fits) and the settings used.
+\code{"adl"} fits), \code{conditioning} (the conditioning variables, if any) and
+\code{cond_lags}, and the settings used.
 }
 \description{
 Tests Granger non-causality in both directions and instantaneous
@@ -96,6 +105,22 @@ direction cannot be identified without further (structural) assumptions,
 and the whole analysis is conditional on the information set used (the
 two series only).
 }
+\section{Conditioning variables}{
+
+With \code{y ~ x | z1 + z2}, lags \eqn{1, \dots,} \code{cond_lags} of every
+conditioning variable enter all four regressions (never \eqn{z_t}: the
+information set of Granger's definition is the past). The tests then ask
+whether \eqn{x} helps to predict \eqn{y} given the past of \eqn{y}
+\strong{and} of the \eqn{z}'s, and the classification is conditional on them.
+A third variable that drives both series can create apparent causality in
+the bivariate test (ADL3), and conditioning on it can remove it; it can
+also reveal causality that the bivariate test misses. With equal orders
+and the conventional covariance the two instantaneous tests are still
+numerically identical, because both regressions share the conditioning
+set. Automatic order selection (\code{select}) is not available with
+conditioning variables.
+}
+
 \examples{
 set.seed(1)
 n <- 200
@@ -107,6 +132,15 @@ d <- ts(cbind(y = y, x = x))
 granger_test("y", "x", p = 2, data = d)
 granger_test(y, x, p = 2)                      # the series directly
 granger_test("y", "x", p = 2, data = d, cov_type = "HAC")
+granger_test(y ~ x, p = 2, data = d)          # formula interface
+
+# a third variable z drives both: x seems to cause y until z is held fixed
+z <- as.numeric(arima.sim(list(ar = 0.5), n))
+x2 <- c(0, z[-n]) + rnorm(n)
+y2 <- c(0, 0, z[-c(n - 1, n)]) + rnorm(n)
+d2 <- ts(cbind(y = y2, x = x2, z = z))
+granger_test(y ~ x, p = 2, data = d2)
+granger_test(y ~ x | z, p = 2, data = d2)
 }
 \references{
 Granger, C. W. J. (1969). Investigating causal relations by econometric

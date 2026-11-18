@@ -306,7 +306,34 @@ interval. The median lag is an integer, so its interval (one to two
 quarters) comes instead from simulated draws of the coefficients, hence
 the `set.seed()`.
 
-## 7. The same steps, in the chapters
+## 7. Forecasting (ADL4)
+
+Dynamic forecasts iterate the model: from the origin on, each step uses the
+earlier forecasts in place of the unknown lags of $y$, while $x$ follows a
+given path. From inside the sample, the path is the data, and the actual
+values can be compared with the forecasts:
+
+```{r, fig.width = 7, fig.height = 4}
+fc <- adl_forecast(fit, origin = c(2016, 4))
+plot(fc)
+```
+
+Beyond the data, the path of $x$ is a scenario, here $x$ held at its last
+value for two years:
+
+```{r, fig.width = 7, fig.height = 4}
+scenario <- data.frame(x = rep(tail(adl_sim[, "x"], 1), 8))
+fc <- adl_forecast(fit, newdata = scenario)
+fc
+plot(fc)
+```
+
+The bands of the fan chart widen with the $\psi$-weights of $1/C(L)$ and
+settle at the unconditional standard deviation of $y$ given $x$. They
+include only the uncertainty of the future errors: the coefficients are
+treated as known, and so is the path of $x$.
+
+## 8. The same steps, in the chapters
 
 | Step | Function | Chapter |
 |:--|:--|:--|
@@ -320,6 +347,7 @@ the `set.seed()`.
 | Outliers and breaks | `adl_outliers()` | (beyond the chapters) |
 | Causality | `granger_test()` (see `vignette("granger")`) | ADL3 |
 | Long run, ECM, dynamics | `adl_long_run()`, `adl_ecm()`, `adl_dynamics()` | ADL2 |
+| Forecasting | `adl_forecast()` (fan charts), `chow_forecast_test()` | ADL4 |
 
 ## What this does not cover
 

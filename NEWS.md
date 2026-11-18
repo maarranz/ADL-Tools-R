@@ -1,3 +1,20 @@
+# adltools 0.6.0
+
+* `granger_test()` and `granger_test_general()` accept a formula, `y ~ x`,
+  and conditioning variables, `y ~ x | z1 + z2`: lags 1 to `cond_lags` of
+  each z enter all four regressions (never z_t), so the tests and the
+  classification are conditional on the past of the z's. The name-based
+  calls are unchanged. Order selection with `select` is not available with
+  conditioning variables. New section in `vignette("granger")`: a common
+  cause that the conditioning removes.
+* `adl_forecast()`: dynamic (iterated) forecasts of y from an ADL, as in
+  ADL4, with the regressors on a known path: from the data inside the
+  sample (with the actual values for comparison) and from `newdata` beyond
+  it (dated, or rows following the data). Standard errors from the
+  psi-weights of 1/C(L), sigma^2 sum psi_i^2, without parameter
+  uncertainty; normal intervals at several levels and a fan chart
+  (`plot()`). `tidy()` and `glance()` methods.
+
 # adltools 0.5.0
 
 * `j_test()`: the J-test of Davidson and MacKinnon (1981) for two

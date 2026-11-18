@@ -13,6 +13,8 @@
 \alias{glance.adl_ecm}
 \alias{tidy.j_test}
 \alias{glance.j_test}
+\alias{tidy.adl_forecast}
+\alias{glance.adl_forecast}
 \title{Tidy and glance methods}
 \usage{
 \method{tidy}{adl}(x, conf.int = TRUE, conf.level = 0.95, ...)
@@ -36,6 +38,10 @@
 \method{tidy}{j_test}(x, ...)
 
 \method{glance}{j_test}(x, ...)
+
+\method{tidy}{adl_forecast}(x, ...)
+
+\method{glance}{adl_forecast}(x, ...)
 }
 \arguments{
 \item{x}{An object from adltools.}

@@ -129,6 +129,36 @@ granger_test("y", "w", p = 2, data = adl_sim)
 
 Nothing is rejected: type 1, $y$ and $w$ independent.
 
+## A third variable
+
+The tests above condition on the past of $y$ and $x$ only. When a third
+variable $z$ drives both, $x$ can appear to cause $y$ just because it
+carries earlier news about $z$. Here $x_t$ reacts to $z_{t-1}$ and $y_t$
+to $z_{t-2}$, and $x$ has no effect of its own:
+
+```{r}
+set.seed(1)
+n <- 300
+z <- as.numeric(arima.sim(list(ar = 0.5), n))
+x <- c(0, z[-n]) + rnorm(n)
+y <- c(0, 0, z[-c(n - 1, n)]) + rnorm(n)
+d3 <- ts(cbind(y = y, x = x, z = z))
+granger_test(y ~ x, p = 2, data = d3)
+```
+
+The bivariate test finds that $x$ causes $y$, with instantaneous
+causality. Conditioning on the past of $z$, written after `|`, adds its
+lags to all four regressions:
+
+```{r}
+granger_test(y ~ x | z, p = 2, data = d3)
+```
+
+Given $z$, $x$ no longer helps to predict $y$, and the two series are
+classified as independent. The classification is
+always relative to the information set: conditioning can remove causality,
+as here, or reveal causality that the bivariate test misses.
+
 ## Using the results
 
 Every element can be extracted, and `tidy()` and `glance()` return data
@@ -147,8 +177,9 @@ summary(g$models$inst_y)
 
 ## Caveats
 
-- The tests condition on the information in $y$ and $x$ alone. A third
-  variable that drives both can create apparent causality.
+- The tests condition on the information in $y$ and $x$ (and the
+  conditioning variables, if any). A variable left out that drives both can
+  create apparent causality.
 - Results can change with the number of lags; check a few orders.
 - With serial correlation or heteroskedasticity in the residuals, use
   `cov_type = "HAC"`.

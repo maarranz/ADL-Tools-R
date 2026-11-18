@@ -48,19 +48,40 @@
 #' two series only).
 #'
 #' @param y,x Column names in `data`, or, when `data` is `NULL`, the two
-#'   series themselves (numeric vectors, `ts` or `zoo`).
+#'   series themselves (numeric vectors, `ts` or `zoo`). Alternatively, `y`
+#'   can be a formula `y ~ x`, or `y ~ x | z1 + z2` to condition on other
+#'   variables (see **Conditioning variables**); then `x` is not given.
 #' @param p Lag order used in all four models.
+#' @param cond_lags Number of lags \eqn{1, \dots, k} of each conditioning
+#'   variable in every model; by default `p` (in [granger_test_general()],
+#'   the largest of the orders).
 #' @param data Optional data (`ts`, `zoo`/`xts`, data frame, tibble or
-#'   tsibble) containing `y` and `x`.
+#'   tsibble) containing `y` and `x` (and the conditioning variables);
+#'   required with a formula.
 #' @param alpha Significance level for the decisions.
 #' @param dist `"chisq"` (default) or `"F"`: the statistic used for the
 #'   decisions and the classification.
 #' @inheritParams adl_vcov
 #' @inheritParams adl
+#' @section Conditioning variables:
+#' With `y ~ x | z1 + z2`, lags \eqn{1, \dots,} `cond_lags` of every
+#' conditioning variable enter all four regressions (never \eqn{z_t}: the
+#' information set of Granger's definition is the past). The tests then ask
+#' whether \eqn{x} helps to predict \eqn{y} given the past of \eqn{y}
+#' **and** of the \eqn{z}'s, and the classification is conditional on them.
+#' A third variable that drives both series can create apparent causality in
+#' the bivariate test (ADL3), and conditioning on it can remove it; it can
+#' also reveal causality that the bivariate test misses. With equal orders
+#' and the conventional covariance the two instantaneous tests are still
+#' numerically identical, because both regressions share the conditioning
+#' set. Automatic order selection (`select`) is not available with
+#' conditioning variables.
+#'
 #' @return An object of class `"granger_test"`: a list with `tests` (a data
 #'   frame with one row per model), `classification` (type number 1-8,
 #'   symbol, description and the `ambiguous` flag), `models` (the four
-#'   `"adl"` fits) and the settings used.
+#'   `"adl"` fits), `conditioning` (the conditioning variables, if any) and
+#'   `cond_lags`, and the settings used.
 #' @references
 #' Granger, C. W. J. (1969). Investigating causal relations by econometric
 #' models and cross-spectral methods. *Econometrica*, 37(3), 424-438.
@@ -78,17 +99,39 @@
 #' granger_test("y", "x", p = 2, data = d)
 #' granger_test(y, x, p = 2)                      # the series directly
 #' granger_test("y", "x", p = 2, data = d, cov_type = "HAC")
+#' granger_test(y ~ x, p = 2, data = d)          # formula interface
+#'
+#' # a third variable z drives both: x seems to cause y until z is held fixed
+#' z <- as.numeric(arima.sim(list(ar = 0.5), n))
+#' x2 <- c(0, z[-n]) + rnorm(n)
+#' y2 <- c(0, 0, z[-c(n - 1, n)]) + rnorm(n)
+#' d2 <- ts(cbind(y = y2, x = x2, z = z))
+#' granger_test(y ~ x, p = 2, data = d2)
+#' granger_test(y ~ x | z, p = 2, data = d2)
 #' @export
 granger_test <- function(y, x, p, data = NULL, alpha = 0.05,
                          dist = c("chisq", "F"),
                          cov_type = c("nonrobust", "HAC"), maxlags = NULL,
-                         time = NULL, start = NULL, end = NULL) {
+                         time = NULL, start = NULL, end = NULL,
+                         cond_lags = p) {
+  ynm <- deparse(substitute(y))
+  xnm <- deparse(substitute(x))
+  cond <- character(0)
+  if (inherits(y, "formula")) {
+    if (!missing(x)) {
+      if (missing(p) && is.numeric(x)) p <- x else
+        stop("With a formula, give the order as `p = `.", call. = FALSE)
+    }
+    gf <- parse_granger_formula(y, data)
+    y <- gf$y; x <- gf$x; cond <- gf$cond
+  }
   check_whole(p, "p")
   if (length(p) != 1 || p < 1) stop("`p` must be a single integer >= 1.", call. = FALSE)
   orders <- list(y = c(p, p), x = c(p, p))
   granger_engine(y, x, data, orders, orders, alpha, match.arg(dist),
                  match.arg(cov_type), maxlags, time, start, end,
-                 ynm = deparse(substitute(y)), xnm = deparse(substitute(x)))
+                 ynm = ynm, xnm = xnm, cond = cond,
+                 cond_lags = check_cond_lags(cond_lags, cond))
 }
 
 #' Granger non-causality tests with model-specific lag orders
@@ -141,9 +184,24 @@ granger_test_general <- function(y, x, orders, inst_orders = orders,
                                  dist = c("chisq", "F"),
                                  cov_type = c("nonrobust", "HAC"),
                                  maxlags = NULL, select = NULL, time = NULL,
-                                 start = NULL, end = NULL, max_order = NULL) {
+                                 start = NULL, end = NULL, max_order = NULL,
+                                 cond_lags = NULL) {
   ynm <- deparse(substitute(y))
   xnm <- deparse(substitute(x))
+  cond <- character(0)
+  if (inherits(y, "formula")) {
+    if (!missing(x)) {
+      if (missing(orders) && is.list(x)) orders <- x else
+        stop("With a formula, give the orders as `orders = `.", call. = FALSE)
+    }
+    gf <- parse_granger_formula(y, data)
+    y <- gf$y; x <- gf$x; cond <- gf$cond
+    if (missing(inst_orders) && !missing(orders)) inst_orders <- orders
+  }
+  if (length(cond) && !is.null(select)) {
+    stop("Automatic order selection (`select`) is not available with ",
+         "conditioning variables; give `orders`.", call. = FALSE)
+  }
   selection <- NULL
   if (!is.null(select)) {
     select <- match.arg(tolower(select), c("bic", "aic", "hq", "gets"))
@@ -187,9 +245,11 @@ granger_test_general <- function(y, x, orders, inst_orders = orders,
   }
   orders <- check_orders(orders, "orders")
   inst_orders <- check_orders(inst_orders, "inst_orders")
+  cond_lags <- cond_lags %||% max(unlist(orders), unlist(inst_orders))
   res <- granger_engine(y, x, data, orders, inst_orders, alpha, match.arg(dist),
                         match.arg(cov_type), maxlags, time, start, end,
-                        ynm = ynm, xnm = xnm)
+                        ynm = ynm, xnm = xnm, cond = cond,
+                        cond_lags = check_cond_lags(cond_lags, cond))
   res$selection <- selection
   res
 }
@@ -197,15 +257,16 @@ granger_test_general <- function(y, x, orders, inst_orders = orders,
 # Engine --------------------------------------------------------------------
 
 granger_engine <- function(y, x, data, orders, inst_orders, alpha, dist,
-                           cov_type, maxlags, time, start, end, ynm, xnm) {
+                           cov_type, maxlags, time, start, end, ynm, xnm,
+                           cond = character(0), cond_lags = 0L) {
   check_alpha(alpha)
-  pair <- granger_data(y, x, data, ynm, xnm)
+  pair <- granger_data(y, x, data, ynm, xnm, cond)
   d <- pair$data
   yv <- pair$y
   xv <- pair$x
 
   # Common sample: drop the largest lag used in any of the four models
-  m <- max(unlist(orders), unlist(inst_orders))
+  m <- max(unlist(orders), unlist(inst_orders), if (length(cond)) cond_lags)
   specs <- list(
     list(dep = yv, other = orders$y, inst = FALSE),
     list(dep = xv, other = orders$x, inst = FALSE),
@@ -214,10 +275,12 @@ granger_engine <- function(y, x, data, orders, inst_orders, alpha, dist,
   )
   models <- lapply(specs, function(s) {
     oth <- if (s$dep == yv) xv else yv
-    lags <- stats::setNames(list(seq_len(s$other[1]),
-                                 (if (s$inst) 0L else 1L):s$other[2]),
-                            c(s$dep, oth))
-    suppressMessages(adl(stats::as.formula(paste(s$dep, "~", oth)), data = d,
+    lags <- stats::setNames(c(list(seq_len(s$other[1]),
+                                   (if (s$inst) 0L else 1L):s$other[2]),
+                              rep(list(seq_len(cond_lags)), length(cond))),
+                            c(s$dep, oth, cond))
+    rhs <- paste(c(oth, cond), collapse = " + ")
+    suppressMessages(adl(stats::as.formula(paste(s$dep, "~", rhs)), data = d,
                          lags = lags, max_lag = m, time = time,
                          start = start, end = end))
   })
@@ -256,6 +319,8 @@ granger_engine <- function(y, x, data, orders, inst_orders, alpha, dist,
     classification = cls,
     models = models,
     y = yv, x = xv,
+    conditioning = cond,
+    cond_lags = if (length(cond)) as.integer(cond_lags) else NA_integer_,
     alpha = alpha, dist = dist, cov_type = cov_type,
     maxlags = attr(adl_vcov(models[[1]], cov_type, maxlags), "maxlags"),
     nobs = length(idx),
@@ -316,7 +381,10 @@ classify_granger <- function(reject, y, x) {
 
 #' Two series from names + data, or from the series themselves
 #' @noRd
-granger_data <- function(y, x, data, ynm, xnm) {
+granger_data <- function(y, x, data, ynm, xnm, cond = character(0)) {
+  if (length(cond) && is.null(data)) {
+    stop("Conditioning variables need `data`.", call. = FALSE)
+  }
   if (!is.null(data)) {
     if (!is.character(y) || !is.character(x) || length(y) != 1 || length(x) != 1) {
       stop("With `data`, `y` and `x` must be column names.", call. = FALSE)
@@ -341,11 +409,46 @@ granger_data <- function(y, x, data, ynm, xnm) {
     }
   }
   if (yv == xv) stop("`y` and `x` must be different variables.", call. = FALSE)
+  if (any(cond %in% c(yv, xv)) || anyDuplicated(cond)) {
+    stop("The conditioning variables must differ from `y`, `x` and each ",
+         "other.", call. = FALSE)
+  }
   if (!identical(make.names(c(yv, xv)), c(yv, xv))) {
     stop("Variable names must be syntactic R names (got '", yv, "', '", xv,
          "'); rename the columns first.", call. = FALSE)
   }
   list(data = data, y = yv, x = xv)
+}
+
+#' Parse y ~ x | z1 + z2
+#' @noRd
+parse_granger_formula <- function(f, data) {
+  if (is.null(data)) stop("A formula needs `data`.", call. = FALSE)
+  if (length(f) != 3) stop("The formula must be of the form y ~ x | z.", call. = FALSE)
+  y <- all.vars(f[[2]])
+  rhs <- f[[3]]
+  cond <- character(0)
+  if (is.call(rhs) && identical(rhs[[1]], as.name("|"))) {
+    cond <- vapply(split_plus(rhs[[3]]), function(e) {
+      if (!is.name(e)) stop("Conditioning variables must be plain names.", call. = FALSE)
+      as.character(e)
+    }, character(1))
+    rhs <- rhs[[2]]
+  }
+  if (length(y) != 1 || !is.name(f[[2]]) || !is.name(rhs)) {
+    stop("The formula must be y ~ x | z1 + z2, with single variables y and x ",
+         "(no lags or transformations).", call. = FALSE)
+  }
+  list(y = y, x = as.character(rhs), cond = unname(cond))
+}
+
+check_cond_lags <- function(k, cond) {
+  if (!length(cond)) return(0L)
+  check_whole(k, "cond_lags")
+  if (length(k) != 1 || k < 1) {
+    stop("`cond_lags` must be a single integer >= 1.", call. = FALSE)
+  }
+  as.integer(k)
 }
 
 check_orders <- function(o, what) {
@@ -381,6 +484,10 @@ print.granger_test <- function(x, digits = 4, ...) {
   cov <- if (x$cov_type == "HAC") paste0("HAC (Bartlett, ", x$maxlags, " lags)")
          else "conventional OLS"
   cat("Covariance:  ", cov, "\n", sep = "")
+  if (length(x$conditioning)) {
+    cat("Conditioning: lags 1-", x$cond_lags, " of ",
+        paste(x$conditioning, collapse = ", "), " in every model\n", sep = "")
+  }
   cat("Decisions:   ", if (x$dist == "F") "F" else "Chi-square", " tests at ",
       format(100 * x$alpha), "%\n", sep = "")
   if (!is.null(x$selection)) {
@@ -416,6 +523,11 @@ print.granger_test <- function(x, digits = 4, ...) {
     cat("  ", cl$symbol[2], " ", cl$description[2], " [type ", cl$type[2],
         "]\n", sep = "")
   }
-  cat("Both series are assumed stationary.\n")
+  if (length(x$conditioning)) {
+    cat("The relation is conditional on the past of ",
+        paste(x$conditioning, collapse = ", "), ".\n", sep = "")
+  }
+  cat(if (length(x$conditioning)) "All series" else "Both series",
+      " are assumed stationary.\n", sep = "")
   invisible(x)
 }
