@@ -128,8 +128,11 @@ index_position <- function(v, idx) {
   num <- as.numeric(idx)
   val <- as.numeric(v)
   steps <- diff(sort(unique(num)))
-  tol <- if (length(steps) && any(steps > 0)) 1e-6 * min(steps[steps > 0]) else
-    1e-8 * max(1, abs(val))
+  # a fraction of the spacing, but never below the floating-point resolution
+  # of the values themselves (epoch seconds with sub-second steps)
+  res <- 64 * .Machine$double.eps * max(abs(c(num, val)))
+  tol <- if (length(steps) && any(steps > 0)) max(1e-6 * min(steps[steps > 0]), res) else
+    max(1e-8 * max(1, abs(val)), res)
   k <- which(abs(num - val) <= tol)
   if (length(k) == 1) k else NA_integer_
 }
@@ -151,7 +154,10 @@ check_regular <- function(idx) {
   bad_step <- function(v, step = NULL) {
     d <- diff(v)
     step <- step %||% d[1]
-    tol <- 1e-8 * max(1, abs(step))
+    # differences of large numbers (epoch seconds) carry rounding of the
+    # order of their last digit: allow for it, far below any real gap
+    tol <- max(1e-8 * max(1, abs(step)),
+               64 * .Machine$double.eps * max(abs(v)))
     k <- which(abs(d - step) >= tol)
     if (length(k)) k[1] else 0L
   }
@@ -178,8 +184,12 @@ check_regular <- function(idx) {
     0L
   }
   if (k > 0L) {
-    stop("The time index has gaps or is irregular (between ", format(idx[k]),
-         " and ", format(idx[k + 1]), "). Lags are taken period by period, so ",
+    # milliseconds only for sub-second data (%OS truncates, hence the 5e-4)
+    subsec <- inherits(idx, "POSIXt") &&
+      any(abs(as.numeric(idx) - round(as.numeric(idx))) > 1e-3)
+    show <- function(i) if (subsec) format(i + 5e-4, "%Y-%m-%d %H:%M:%OS3") else format(i)
+    stop("The time index has gaps or is irregular (between ", show(idx[k]),
+         " and ", show(idx[k + 1]), "). Lags are taken period by period, so ",
          "a missing period would be skipped. Insert the missing periods or ",
          "estimate on a stretch without gaps; irregular data are not supported.",
          call. = FALSE)

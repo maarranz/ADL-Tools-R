@@ -167,7 +167,7 @@ adl_forecast <- function(fit, h = NULL, newdata = NULL, origin = NULL,
                     actual = unname(actual))
   for (lv in level) {
     zc <- stats::qnorm(1 - (1 - lv) / 2)
-    tag <- format(100 * lv)
+    tag <- level_tag(lv)
     out[[paste0("lower_", tag)]] <- f - zc * se
     out[[paste0("upper_", tag)]] <- f + zc * se
   }
@@ -209,8 +209,12 @@ extend_with_newdata <- function(z, newdata, vars, y, time) {
     stop("The time index of `newdata` is not of the same kind as that of the ",
          "data; give its rows in order without a time column instead.", call. = FALSE)
   }
-  keep <- as.numeric(nidx) > as.numeric(idx[length(idx)]) +
-    1e-8 * max(1, abs(as.numeric(idx[length(idx)])))
+  # rows after the end of the data: compare with half the smallest spacing
+  # of the data, never with an absolute or epoch-relative tolerance
+  num_idx <- as.numeric(idx)
+  steps <- diff(num_idx)
+  half <- if (length(steps)) min(steps[steps > 0]) / 2 else 0.5
+  keep <- as.numeric(nidx) > num_idx[length(num_idx)] + half
   if (!any(keep)) return(z)
   nz <- nz[keep, , drop = FALSE]
   cols <- intersect(vars, colnames(nz))
@@ -241,8 +245,11 @@ next_index <- function(idx, k) {
     ym <- zoo::as.yearmon(last) + step * seq_len(k) / 12
     month_end <- all(zoo::as.Date(zoo::as.yearmon(idx), frac = 1) == idx)
     if (month_end) return(zoo::as.Date(ym, frac = 1))
-    day <- as.integer(format(last, "%d"))
-    return(zoo::as.Date(ym) + (day - 1))
+    # the day of the month, capped at the end of short months (the 30th is
+    # the 28th in February), as accepted when the data were validated
+    anchor <- max(as.integer(format(idx, "%d")))
+    mlen <- as.integer(format(zoo::as.Date(ym, frac = 1), "%d"))
+    return(zoo::as.Date(ym) + (pmin(anchor, mlen) - 1L))
   }
   if (inherits(idx, "POSIXt")) {
     stop("Give `newdata` with times for data indexed by date-times.", call. = FALSE)
@@ -304,8 +311,8 @@ plot.adl_forecast <- function(x, n_history = NULL, main = NULL, xlab = "",
   tf <- fc$index
   tt <- c(th, tf)
   levs <- sort(x$level, decreasing = TRUE)
-  lows <- unlist(fc[paste0("lower_", format(100 * levs))])
-  highs <- unlist(fc[paste0("upper_", format(100 * levs))])
+  lows <- unlist(fc[paste0("lower_", level_tag(levs))])
+  highs <- unlist(fc[paste0("upper_", level_tag(levs))])
   ylim <- range(c(zoo::coredata(hist), fc$forecast, lows, highs, fc$actual),
                 na.rm = TRUE)
   main <- main %||% paste0("Dynamic forecasts of ", x$y, " (origin ",
@@ -317,7 +324,7 @@ plot.adl_forecast <- function(x, n_history = NULL, main = NULL, xlab = "",
   last_y <- as.numeric(hist[length(hist)])
   greys <- grDevices_grey(length(levs))
   for (i in seq_along(levs)) {
-    tag <- format(100 * levs[i])
+    tag <- level_tag(levs[i])
     lo <- c(last_y, fc[[paste0("lower_", tag)]])
     hi <- c(last_y, fc[[paste0("upper_", tag)]])
     xs <- c(last_t, as.numeric(tf))
@@ -327,10 +334,16 @@ plot.adl_forecast <- function(x, n_history = NULL, main = NULL, xlab = "",
   if (any(!is.na(fc$actual))) graphics::points(tf, fc$actual, pch = 19, cex = 0.6)
   graphics::abline(v = last_t, lty = 3, col = "grey40")
   graphics::legend("topleft", bty = "n", fill = greys,
-                   legend = paste0(format(100 * levs), "%"), border = NA,
+                   legend = paste0(level_tag(levs), "%"), border = NA,
                    cex = 0.8)
   invisible(x)
 }
+
+#' Column tag of a confidence level (one per level, so a vector of levels
+#' gets exactly the tags the columns were built with: 0.95 -> "95",
+#' 0.999 -> "99.9")
+#' @noRd
+level_tag <- function(lv) vapply(lv, function(v) format(100 * v, digits = 15), "")
 
 #' Shades of grey, light (widest band) to dark (narrowest)
 #' @noRd

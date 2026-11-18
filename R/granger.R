@@ -164,6 +164,11 @@ granger_test <- function(y, x, p, data = NULL, alpha = 0.05,
 #'   information criteria are preferable. ADL3 notes the trade-off: more lags
 #'   of the other variable capture its influence more completely, but cost
 #'   power.
+#'
+#'   The orders are chosen on the sample of the largest model (`max_order`
+#'   lags), but the four tests are then run on the common sample of the
+#'   selected orders, which can be longer: the search and the reported test
+#'   use different observations.
 #' @param max_order Largest lag considered when `select` is used. By default
 #'   4 for quarterly, 12 for monthly and 2 for other data.
 #' @return An object of class `"granger_test"`; see [granger_test()].

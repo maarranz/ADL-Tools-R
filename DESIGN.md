@@ -379,7 +379,7 @@ tests), knitr, rmarkdown.
 | `R/vcov.R` | `adl_vcov(fit, cov_type, maxlags)`, identical to forecastingtools |
 | `R/test-class.R` | `adltools_test` constructor and print method |
 | `R/inference.R` | `adl_coefficients()`, `adl_joint_test()`, `adl_long_run()` |
-| `R/granger.R` | engine, `granger_test()`, `granger_test_general()` (`select =` stops with "not yet implemented"), classification |
+| `R/granger.R` | engine, `granger_test()`, `granger_test_general()` (`select =` added in v0.4.0), classification |
 | `R/tidy.R` | `tidy()`/`glance()` methods |
 | `vignettes/granger.Rmd` | Granger causality following ADL3 |
 | `data/` | small simulated ADL(1,1) dataset with known parameters |

@@ -86,7 +86,8 @@ cusum_test <- function(fit, alpha = 0.05) {
   r <- seq_len(m)
   scale <- sqrt(m) + 2 * r / sqrt(m)
   stat <- max(abs(W) / scale)
-  a <- stats::uniroot(function(a) cusum_pvalue(a) - alpha, c(0.1, 5), tol = 1e-10)$root
+  a <- stats::uniroot(function(a) cusum_log_pvalue(a) - log(alpha), c(0.1, 50),
+                      tol = 1e-10)$root
   out <- abs(W) > a * scale
   res <- new_adl_test(list(
     method = "cusum",
@@ -104,8 +105,15 @@ cusum_test <- function(fit, alpha = 0.05) {
 
 #' Asymptotic p-value of the CUSUM statistic (Brown, Durbin and Evans, 1975)
 #' @noRd
-cusum_pvalue <- function(a) {
-  min(1, 2 * (1 - stats::pnorm(3 * a) + exp(-4 * a^2) * stats::pnorm(a)))
+cusum_pvalue <- function(a) exp(cusum_log_pvalue(a))
+
+#' log of the CUSUM p-value, without cancellation in the tail
+#' @noRd
+cusum_log_pvalue <- function(a) {
+  l1 <- stats::pnorm(3 * a, lower.tail = FALSE, log.p = TRUE)
+  l2 <- -4 * a^2 + stats::pnorm(a, log.p = TRUE)
+  m <- max(l1, l2)
+  min(0, log(2) + m + log(exp(l1 - m) + exp(l2 - m)))
 }
 
 #' CUSUM-of-squares test

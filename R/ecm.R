@@ -139,11 +139,18 @@ adl_ecm <- function(fit, cov_type = c("nonrobust", "HAC"), maxlags = NULL,
   colnames(A) <- names(theta)
   cvec <- vapply(rows, `[[`, numeric(1), "c")
   terms <- vapply(rows, `[[`, character(1), "term")
+  # generated names can coincide with a control's name (a control called
+  # x_lag1 when x enters only at lag 0): keep every row label unique
+  if (anyDuplicated(terms)) terms <- make.unique(terms, sep = ".")
   rownames(A) <- names(cvec) <- terms
   est <- drop(A %*% theta) + cvec
   Vecm <- A %*% V %*% t(A)
   se <- sqrt(pmax(diag(Vecm), 0))
-  tab <- ecm_table(terms, est, se, dist, df_resid(fit), alpha)
+  # fixed (not estimated) terms are those that depend on no coefficient: a
+  # zero row of A (b = -1 without lags of y). Small standard errors are not
+  # a reason to treat a term as fixed (they depend on the units of x).
+  fixed <- rowSums(A != 0) == 0
+  tab <- ecm_table(terms, est, se, dist, df_resid(fit), alpha, fixed)
   tab <- cbind(tab[1], param = vapply(rows, `[[`, character(1), "param"), tab[-1])
 
   # equilibrium-error form: b and the long-run multipliers
@@ -195,9 +202,8 @@ adl_ecm <- function(fit, cov_type = c("nonrobust", "HAC"), maxlags = NULL,
 
 #' coef_table() with fixed (zero-variance) terms
 #' @noRd
-ecm_table <- function(terms, b, se, dist, df, alpha) {
+ecm_table <- function(terms, b, se, dist, df, alpha, fixed) {
   tab <- coef_table(terms, b, se, dist, df, alpha)
-  fixed <- se <= sqrt(.Machine$double.eps) * pmax(1, abs(b))
   tab$std.error[fixed] <- 0
   tab$statistic[fixed] <- tab$p.value[fixed] <- NA_real_
   tab$conf.low[fixed] <- tab$conf.high[fixed] <- b[fixed]

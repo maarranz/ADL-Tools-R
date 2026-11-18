@@ -1,3 +1,35 @@
+# adltools 0.7.1
+
+Fixes from the fourth external audit (2026-11-18).
+
+* `adl_ecm()`: a term is shown as fixed (zero standard error, no test) only
+  when it depends on no coefficient (b = -1 without lags of y). Before,
+  any standard error below a threshold was set to zero, so rescaling x
+  (e.g. by 1e10) gave point intervals. Row labels are now unique when a
+  control's name coincides with a generated ECM term (e.g. `x_lag1`).
+* `adl_forecast()`: rows of `newdata` after the end of the data are
+  selected with half the data's spacing, not an epoch-relative tolerance
+  that dropped date-times one second apart. Dates extended for monthly
+  data on a day capped at short months (the 30th, 28th in February) keep
+  that convention. The fan chart works for any set of levels (column tags
+  are built the same way for the table and the plot).
+* Time indexes: regular sub-second grids are no longer rejected as
+  irregular (the tolerance allows for the floating-point resolution of
+  epoch seconds); gap messages show milliseconds.
+* `adl_getsm()` and `adl_outliers()`: the refitted model keeps
+  non-syntactic variable names (formulas are rebuilt with quoted names).
+* `j_test()`: rank-deficient models (on the common sample) and `dynlm`
+  fits with aliased coefficients, weights or an offset are refused with a
+  clear message, instead of failing with "0 (non-NA) cases".
+* `cusum_test()`: very small `alpha` (e.g. 1e-50) works; the p-value is
+  computed on the log scale.
+* `adl_outliers()`: samples too short for a search stop with a message,
+  and a search without candidates returns no outliers.
+* `adl_dynamics()`: `max_horizon` must be a single integer >= 0.
+* Documentation: in `granger_test_general(select = )` the orders are
+  chosen on the sample of the largest model, and the tests run on the
+  common sample of the selected orders.
+
 # adltools 0.7.0
 
 * `adl_getsm()`: term-by-term, multi-path general-to-specific search

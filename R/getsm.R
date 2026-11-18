@@ -133,9 +133,7 @@ adl_getsm <- function(fit, alpha = 0.05,
   if (length(xs)) {
     lags <- c(stats::setNames(list(lagsel(fit$y, "ar")), fit$y),
               stats::setNames(lapply(xs, lagsel, role = "dl"), xs))
-    rhs <- paste(xs, collapse = " + ")
-    if (length(unl)) rhs <- paste(rhs, "|", paste(unl, collapse = " + "))
-    f <- stats::as.formula(paste(fit$y, "~", rhs))
+    f <- adl_formula(fit$y, xs, unl)
     new_fit <- suppressMessages(adl(f, data = fit$data, lags = lags,
                                     intercept = fit$intercept,
                                     trend = fit$trend && "trend" %in% selected,

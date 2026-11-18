@@ -101,6 +101,10 @@ adl_outliers <- function(fit, types = c("impulse", "step"), cval = NULL,
   X <- stats::model.matrix(fit$lm)
   y <- as.numeric(stats::model.response(stats::model.frame(fit$lm)))
   n <- length(y)
+  if (n - ncol(X) < 3) {
+    stop("Too few observations (", n, ") for an outlier search with ", ncol(X),
+         " coefficients: at least ", ncol(X) + 3, " are needed.", call. = FALSE)
+  }
   if (is.null(cval)) cval <- outlier_cval(n)
   if (!is.numeric(cval) || length(cval) != 1 || !is.finite(cval) || cval <= 0) {
     stop("`cval` must be a single positive number.", call. = FALSE)
@@ -141,6 +145,9 @@ dummy_col <- function(type, pos, n) {
 outlier_search <- function(y, X, types, cval, max_iter) {
   n <- length(y)
   cand <- outlier_candidates(n, types)
+  if (is.null(cand) || !nrow(cand)) {
+    return(data.frame(type = character(0), pos = integer(0)))
+  }
   Dall <- vapply(seq_len(nrow(cand)), function(i) dummy_col(cand$type[i], cand$pos[i], n),
                  numeric(n))
   sel <- integer(0)
@@ -237,9 +244,7 @@ build_outlier_result <- function(fit, found, cval, method) {
                     estimate = numeric(0), statistic = numeric(0))
   if (nrow(found)) {
     newdata <- zoo::zoo(cbind(zoo::coredata(dat), D), didx)
-    rhs_x <- if (length(fit$x)) paste(fit$x, collapse = " + ") else "1"
-    f <- stats::as.formula(paste(fit$y, "~", rhs_x, "|",
-                                 paste(c(fit$unlagged, names_d), collapse = " + ")))
+    f <- adl_formula(fit$y, fit$x, c(fit$unlagged, names_d))
     refit <- adl(f, data = newdata, lags = fit$lags, intercept = fit$intercept,
                  trend = fit$trend, max_lag = fit$max_lag)
     if (stats::nobs(refit) != stats::nobs(fit)) {

@@ -119,6 +119,9 @@ adl_dynamics <- function(fit, x = NULL, horizon = NULL, tolerance = 0.99,
     stop("`tolerance` must lie strictly between 0 and 1.", call. = FALSE)
   }
   check_whole(max_horizon, "max_horizon")
+  if (length(max_horizon) != 1 || max_horizon < 0) {
+    stop("`max_horizon` must be a single integer >= 0.", call. = FALSE)
+  }
   if (!is.null(horizon)) {
     check_whole(horizon, "horizon")
     if (length(horizon) != 1 || horizon < 0) {

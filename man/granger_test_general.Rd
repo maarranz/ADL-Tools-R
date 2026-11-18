@@ -69,7 +69,12 @@ fit, together with the own lags; with \code{"gets"} they are dropped by their
 significance and then tested, a pre-test that favours rejection, so the
 information criteria are preferable. ADL3 notes the trade-off: more lags
 of the other variable capture its influence more completely, but cost
-power.}
+power.
+
+The orders are chosen on the sample of the largest model (\code{max_order}
+lags), but the four tests are then run on the common sample of the
+selected orders, which can be longer: the search and the reported test
+use different observations.}
 
 \item{time}{Name of the time column when \code{data} is a data frame; detected
 automatically when there is a single date column.}

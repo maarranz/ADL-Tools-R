@@ -101,6 +101,15 @@ j_test <- function(fit_a, fit_b, cov_type = c("nonrobust", "HAC"),
   if (n <= ncol(Xa) + 1 || n <= ncol(Xb) + 1) {
     stop("Too few common observations (", n, ") for the J-test.", call. = FALSE)
   }
+  # each model must be of full rank on the common sample, or its fitted
+  # values are not defined (and a rank-deficient model is not identified)
+  for (k in 1:2) {
+    X <- if (k == 1) Xa else Xb
+    if (qr(X)$rank < ncol(X)) {
+      stop("Model ", names[k], " is rank deficient on the common sample ",
+           "(collinear regressors): drop the redundant terms.", call. = FALSE)
+    }
+  }
 
   # nesting: the test needs regressors of each model outside the other's span
   rk <- function(X) qr(X)$rank
@@ -222,6 +231,14 @@ j_parts <- function(fit, arg) {
                 index = fit$index, formula = fit$dynlm, yname = fit$y))
   }
   if (inherits(fit, "dynlm")) {
+    if (!is.null(fit$weights) || !is.null(stats::model.offset(stats::model.frame(fit)))) {
+      stop("`", arg, "`: dynlm fits with weights or an offset are not supported ",
+           "(the J-test refits by ordinary least squares).", call. = FALSE)
+    }
+    if (anyNA(stats::coef(fit))) {
+      stop("`", arg, "` has aliased (NA) coefficients: drop the collinear terms.",
+           call. = FALSE)
+    }
     f <- stats::formula(fit)
     return(list(X = stats::model.matrix(fit),
                 y = as.numeric(stats::model.response(stats::model.frame(fit))),
