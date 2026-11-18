@@ -4,7 +4,7 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: version 0.4.0.** Formulation, estimation, inference, dynamic effects, Granger non-causality (with automatic lag selection), residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super), outlier and break detection, and general-to-specific lag selection. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.5.0.** Formulation, estimation, inference, the ECM form, dynamic effects with standard errors, the J-test for non-nested models, Granger non-causality (with automatic lag selection), residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super), outlier and break detection, and general-to-specific lag selection. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 
@@ -14,19 +14,21 @@ Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, d
 |:--|:--|
 | Formulation and estimation | `adl()`: lag orders with `order` and `first_lag`, explicit lag sets, or `dynlm`-style formulas; several regressors; unlagged dummies after `\|`; `ts`, `zoo`/`xts`, data frames, tibbles and tsibbles |
 | Inference | `summary()`, `adl_coefficients()` (parameters in the chapters' α/β notation), `adl_joint_test()`, `adl_long_run()`; conventional or Newey–West (HAC) covariance |
-| Dynamic effects | `adl_dynamics()`: dynamic and cumulative multipliers, mean and median lag, inverse roots |
+| Error correction form | `adl_ecm()`: the fitted ADL rewritten as an ECM (exact standard errors), with the speed of adjustment, the long-run multipliers and the equilibrium error |
+| Dynamic effects | `adl_dynamics()`: dynamic and cumulative multipliers, mean and median lag, with standard errors; inverse roots |
 | Lag orders | `adl_ic()`: AIC, BIC and Hannan–Quinn on a common sample, with and without the contemporaneous regressor |
 | General-to-specific | `adl_gets()`: from ADL(p, p) down, joint Wald tests of the highest lags, diagnostics at every step |
 | Granger non-causality | `granger_test()`, `granger_test_general()`: Sargent's direct procedure and the eight causal types; orders by BIC/AIC/HQ or Gets with `select` |
 | Diagnostics | `adl_diagnostics()`, `bg_test()` (Breusch–Godfrey), `arch_test()` (ARCH-LM), `reset_test()` (RESET), `jb_test()` (Jarque–Bera) |
 | Stability | `cusum_test()`, `cusumsq_test()` (with plots), `hansen_test()` (per parameter, no break date), `chow_break_test()`, `chow_forecast_test()` (static 1-step or dynamic N-step) |
+| Non-nested models | `j_test()`: the J-test in both directions, with the four-outcome reading of the chapters; `adl` or `dynlm` fits |
 | Common factors | `comfac_test()`: COMFAC of any order (LR), and the ADL(1,1) Wald form of the chapters |
 | Outliers and breaks | `adl_outliers()` (impulse and step dummies; own search or `gets::isat()`) |
 | Exogeneity | `wu_hausman_test()` (predeterminedness), `weak_exogeneity_test()` (weak, and strong with `strong = TRUE`), `super_exogeneity_test()` (invariance to breaks in the marginal process) |
 | Existing fits | `as_adl()` converts a `dynlm` fit |
 | Output | `print()`, `plot()`, `tidy()`, `glance()` |
 
-**Scope.** The tests assume stationary variables, or, where the chapters say so, cointegrated ones. The package does not test for unit roots or cointegration and provides no bounds test or ECM estimation: unit roots belong to `unitroottools`, and cointegration to a planned companion package. With integrated series, a finite long-run multiplier or a conventional Wald p-value does not establish a long-run relation.
+**Scope.** The tests assume stationary variables, or, where the chapters say so, cointegrated ones. The package does not test for unit roots or cointegration and provides no bounds test or cointegrating-regression ECM (`adl_ecm()` only rewrites a fitted ADL): unit roots belong to `unitroottools`, and cointegration to a planned companion package. With integrated series, a finite long-run multiplier or a conventional Wald p-value does not establish a long-run relation.
 
 Inference uses the asymptotic normal and chi-square distributions by default: the regressions are dynamic, so exact t and F results do not apply. `dist = "t"` or `dist = "F"` reproduces the figures of EViews and `summary.lm()`.
 
@@ -43,7 +45,8 @@ fit <- adl(y ~ L(y, 1) + L(x, 0:1), data = adl_sim)
 summary(fit)                         # alpha/beta labels, z p-values
 summary(fit, cov_type = "HAC")       # Newey-West standard errors
 adl_long_run(fit)                    # long-run multiplier, delta method
-adl_dynamics(fit)                    # multipliers, mean and median lag
+adl_ecm(fit)                         # the same model in ECM form
+adl_dynamics(fit)                    # multipliers, mean and median lag, with SEs
 adl_joint_test(fit, variables = "x") # Wald test: all lags of x are zero
 
 # The dead-start model: x enters from lag 1

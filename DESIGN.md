@@ -131,6 +131,29 @@ be significant because of the bias. The choice is the user's, as in ADL3.
   (taxonomy restrictions, Gets steps).
 - `adl_long_run(fit)`: k₀ and k_i for every regressor, with delta-method
   standard errors.
+- `j_test(fit_a, fit_b)` (v0.5.0): both directions on the common sample
+  (dates matched), same dependent variable checked by value; `adl` or
+  `dynlm` fits (a pure AR(1) is not an `adl`); refuses nested pairs (rank of
+  [X_A, X_B] equal to that of one of them) and points to
+  `adl_joint_test()`. z (default) or t; nonrobust or HAC. Outcome
+  `neither` / `against_a` / `against_b` / `both` with the ADL3 wording.
+  Checked against the two regressions written out.
+- `adl_ecm(fit)` (v0.5.0): the ECM is linear in the ADL coefficients,
+  ECM = Aθ + c (c = −1 for b), so its covariance is A V Aᵀ, exact and equal
+  to that of the ECM regression (checked with nonrobust and HAC). b = −C(1),
+  β*_i = B_i(1), γ_j = −Σ_{k>j} α_k, δ_i0 = β_i0, δ_ij = −Σ_{k>j} β_ik;
+  absent lags are zero restrictions. Equilibrium-error form: b and k_i
+  from `adl_long_run()`; the equilibrium error y − Σ k_i x_i as in
+  `weak_exogeneity_test()`.
+- `adl_dynamics(fit)` (v0.5.0): delta-method standard errors for d_h, M_h,
+  k_i and the mean lag; the Jacobian of d_h follows the multiplier
+  recursion (∂d_h/∂α_k = d_{h−k} + Σ α_i ∂d_{h−i}/∂α_k). The median lag is
+  an integer (first crossing of one half), so its interval is the
+  α/2, 1 − α/2 quantiles of the median lag over `nsim` draws from
+  N(θ̂, V̂), with the share of draws where it is undefined. Checked against
+  a numerical Jacobian and by Monte Carlo (ADL(1,1), T = 200: coverage
+  0.95 for d_h, M_h, k; 0.93 for the mean lag; conservative for the median
+  lag). `se = FALSE` gives the point estimates only.
 - All take `cov_type = c("nonrobust", "HAC")` and `maxlags`.
 - Asymptotic distributions by default (normal, χ²), with either
   covariance: the regressions are dynamic, so exact t and F do not hold.
@@ -340,6 +363,14 @@ class → inference → Granger → tidy/glance → vignette and data → releas
 
 Outlier detection: `adl_outliers()` (section 9).
 
+**v0.5.0 files**
+
+| File | Contents |
+|:--|:--|
+| `R/dynamics.R` | `adl_dynamics()` with delta-method standard errors (Jacobian by the multiplier recursion) and the simulated median-lag interval |
+| `R/ecm.R` | `adl_ecm()`: ECM = Aθ + c, exact covariance A V Aᵀ; equilibrium-error form and the equilibrium error |
+| `R/jtest.R` | `j_test()`: both directions on the common sample; `adl` or `dynlm` fits; nesting check |
+
 **Testing.** Development tests run in a Linux R installation in the
 assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 
@@ -370,10 +401,15 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
   `gets::isat()`), `adl_gets()` tier 1, automatic order selection in
   `granger_test_general()` (`select = "bic"/"aic"/"hq"/"gets"`), the
   `slopes` option of `super_exogeneity_test()`; fixes from the third audit.
-- **Later** — J-test with the four-outcome reading; standard errors for
-  dynamic multipliers and lags; ECM view; dynamic forecasts with ψ-weight
-  variance and fan charts; Sargan's general COMFAC Wald; `gets` adapter
-  (tier 2); Granger with conditioning variables.
+- **v0.5.0** (released 2026-11-18) — standard errors in `adl_dynamics()`
+  (delta method; simulated interval for the median lag); `adl_ecm()`;
+  `j_test()`.
+- **Next** — v0.6.0: dynamic forecasts with ψ-weight variance (no
+  parameter uncertainty) and fan charts; Granger with conditioning
+  variables (`y ~ x | z`). v0.7.0: Sargan's general COMFAC Wald; `gets`
+  adapter (tier 2).
+- **Later** — parameter uncertainty in forecast variances (Lütkepohl
+  2005, section 3.5).
 - **Elsewhere** — forecastingtools: `static_forecast()` for ADL fits and the
   `scheme` argument.
 
@@ -381,7 +417,7 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 
 1. Test data: simulated DGPs for unit tests; which real dataset to
    cross-check against EViews?
-2. ECM view: `adl_ecm(fit)` or a `form` argument.
+2. ~~ECM view~~: decided, `adl_ecm(fit)` (v0.5.0).
 3. ~~Outlier critical values~~: decided, the tsoutliers rule (section 9).
 4. Granger with several regressors: conditioning set and output format.
 

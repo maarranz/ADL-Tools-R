@@ -9,7 +9,13 @@ adl_dynamics(
   x = NULL,
   horizon = NULL,
   tolerance = 0.99,
-  max_horizon = 500
+  max_horizon = 500,
+  se = TRUE,
+  cov_type = c("nonrobust", "HAC"),
+  maxlags = NULL,
+  alpha = 0.05,
+  dist = c("normal", "t"),
+  nsim = 1000
 )
 }
 \arguments{
@@ -26,23 +32,47 @@ unstable model, or one with a zero long run, the default is 20 lags.}
 \item{tolerance}{Share of the long-run multiplier that sets the automatic
 horizon.}
 
-\item{max_horizon}{Upper limit for the automatic horizon.}
+\item{max_horizon}{Upper limit for the automatic horizon, and for the
+search for the median lag in the simulated draws.}
+
+\item{se}{Compute standard errors and intervals (default \code{TRUE}).}
+
+\item{cov_type}{\code{"nonrobust"} (conventional OLS, the default) or \code{"HAC"}
+(Newey-West, Bartlett kernel, no prewhitening, no small-sample
+adjustment).}
+
+\item{maxlags}{HAC bandwidth. \code{NULL} uses the automatic rule
+\eqn{\lfloor 4 (n/100)^{2/9} \rfloor}{floor(4 (n/100)^(2/9))}, capped at
+\eqn{n - 1}. Must be \code{NULL} with \code{cov_type = "nonrobust"}.}
+
+\item{alpha}{Significance level for the intervals.}
+
+\item{dist}{\code{"normal"} (default) or \code{"t"}: the reference distribution for
+the delta-method intervals. Both are asymptotic approximations.}
+
+\item{nsim}{Number of simulated coefficient vectors for the median-lag
+interval; \code{0} skips the simulation (the interval is then \code{NA}).}
 }
 \value{
 An object of class \code{"adl_dynamics"}: a list with \code{effects} (one
 row per regressor and lag: \code{variable}, \code{lag}, \code{effect}, \code{cumulative},
-\code{pct_effect}, \code{pct_cumulative}), \code{summary} (one row per regressor:
-\code{long_run}, \code{mean_lag}, \code{median_lag}, \code{horizon}), \code{roots} (roots,
-inverse roots and their moduli) and \code{stable}.
+\code{pct_effect}, \code{pct_cumulative}, and with \code{se = TRUE} also \code{se_effect}
+and \code{se_cumulative}), \code{summary} (one row per regressor: \code{long_run},
+\code{mean_lag}, \code{median_lag}, \code{horizon}, and with \code{se = TRUE} also
+\code{se_long_run}, \code{se_mean_lag}, \code{median_lag_low}, \code{median_lag_high} and
+\code{median_lag_undefined}), \code{roots} (roots, inverse roots and their
+moduli), \code{stable}, and the settings of the inference (\code{se}, \code{cov_type},
+\code{maxlags}, \code{alpha}, \code{dist}, \code{crit}, \code{nsim}).
 }
 \description{
 Computes, for each regressor, the dynamic multipliers \eqn{d_h} (the
 effect on \eqn{y_{t+h}} of a one-off unit change in \eqn{x_t}), the
 cumulative multipliers \eqn{M_h} (the effect of a permanent change),
 each as a percentage of the long-run multiplier, and the mean and median
-lags. Also reports the roots of \eqn{C(z) = 1 - \alpha_1 z - \dots -
-\alpha_p z^p} and their inverses: the model is dynamically stable when
-all inverse roots lie inside the unit circle.
+lags, with their standard errors. Also reports the roots of
+\eqn{C(z) = 1 - \alpha_1 z - \dots - \alpha_p z^p} and their inverses:
+the model is dynamically stable when all inverse roots lie inside the
+unit circle.
 }
 \details{
 The multipliers follow the recursion
@@ -59,7 +89,37 @@ For an unstable model the multipliers are still computed for a finite
 horizon, showing how the response grows, but the long-run multiplier,
 the percentages and the mean and median lags are \code{NA}.
 
-These are point estimates; their sampling uncertainty is not reported.
+\strong{Standard errors} (\code{se = TRUE}). The multipliers, the cumulative
+multipliers, the long-run multiplier and the mean lag are smooth
+functions of the coefficients, and their standard errors come from the
+delta method with the covariance of \code{\link[=adl_vcov]{adl_vcov()}}. The derivatives of
+\eqn{d_h} follow the same recursion as the multipliers:
+\deqn{\frac{\partial d_h}{\partial \beta_j} = 1\{h = j\} +
+  \sum_i \alpha_i \frac{\partial d_{h-i}}{\partial \beta_j}, \qquad
+  \frac{\partial d_h}{\partial \alpha_k} = d_{h-k} +
+  \sum_i \alpha_i \frac{\partial d_{h-i}}{\partial \alpha_k}.}
+The long-run standard error is the one of \code{\link[=adl_long_run]{adl_long_run()}}.
+
+The median lag is an integer (the first lag past one half), so it has no
+derivative and the delta method does not apply. Its interval is
+obtained by simulation: \code{nsim} coefficient vectors are drawn from the
+asymptotic normal distribution \eqn{N(\hat\theta, \hat V)}, the median lag
+is recomputed for each, and the interval is formed by the
+\eqn{\alpha/2} and \eqn{1 - \alpha/2} quantiles of the draws. Draws for
+which the median lag is not defined (an unstable model, a zero long run,
+or no crossing within \code{max_horizon} lags) are dropped, and their share is
+reported as \code{median_lag_undefined}; a large share means the interval
+should not be trusted. The draws use R's random-number generator: call
+\code{\link[=set.seed]{set.seed()}} first for reproducible intervals.
+
+All this inference is asymptotic and conditional on the lag orders, and
+assumes a stable model with \eqn{C(1)} well away from zero: near a unit
+root the long run and the mean lag are weakly identified and symmetric
+intervals can be misleading (the median-lag interval then shows a large
+undefined share or a very long upper limit). The same holds when the
+long-run multiplier is not significantly different from zero: the
+percentages and the median lag are then shares of a quantity that may be
+zero, and their intervals are not informative.
 }
 \examples{
 set.seed(1)
@@ -69,5 +129,7 @@ fit <- adl(y ~ x, data = ts(cbind(y = as.numeric(y), x = x)), order = c(1, 1))
 dyn <- adl_dynamics(fit)
 dyn
 plot(dyn)
+plot(dyn, type = "cumulative")
 plot(dyn, type = "roots")
+adl_dynamics(fit, cov_type = "HAC", nsim = 500)
 }

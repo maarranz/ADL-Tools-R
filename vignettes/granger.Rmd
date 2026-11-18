@@ -160,6 +160,7 @@ the dynamic effects:
 
 ```{r, fig.width = 7, fig.height = 4}
 fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
+set.seed(1)  # the median-lag interval is simulated
 dyn <- adl_dynamics(fit)
 dyn
 plot(dyn, type = "cumulative")

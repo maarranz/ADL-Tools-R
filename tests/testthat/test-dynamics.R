@@ -144,3 +144,93 @@ test_that("a short max_horizon warns instead of failing (audit 2)", {
   expect_equal(max(dy$effects$lag), 2)
   expect_warning(adl_dynamics(fit, max_horizon = 0), "did not settle")
 })
+
+test_that("delta-method standard errors match a numerical Jacobian", {
+  fit <- dyn_fit()
+  dy <- adl_dynamics(fit, horizon = 12, nsim = 0)
+  b <- coef(fit)
+  V <- vcov(fit)
+  f <- function(th) {
+    f2 <- fit
+    f2$lm$coefficients[] <- th
+    dd <- adl_dynamics(f2, horizon = 12, se = FALSE)
+    c(dd$effects$effect, dd$effects$cumulative, dd$summary$long_run,
+      dd$summary$mean_lag)
+  }
+  J <- vapply(seq_along(b), function(k) {
+    e <- numeric(length(b)); e[k] <- 1e-6
+    (f(b + e) - f(b - e)) / 2e-6
+  }, numeric(length(f(b))))
+  se_num <- sqrt(rowSums((J %*% V) * J))
+  se <- c(dy$effects$se_effect, dy$effects$se_cumulative,
+          dy$summary$se_long_run, dy$summary$se_mean_lag)
+  expect_equal(se, se_num, tolerance = 1e-6)
+  # the long run is the one of adl_long_run(), with either covariance
+  for (ct in c("nonrobust", "HAC")) {
+    lr <- adl_long_run(fit, cov_type = ct)
+    dh <- adl_dynamics(fit, horizon = 3, cov_type = ct, nsim = 0)
+    expect_equal(dh$summary$se_long_run, lr$std.error[lr$term %in% c("x1", "x2")])
+  }
+})
+
+test_that("ADL(1,1) closed forms for the standard errors", {
+  # d_0 = b0: se is the coefficient's; d_1 = a b0 + b1
+  fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
+  b <- coef(fit)
+  V <- vcov(fit)
+  dy <- adl_dynamics(fit, horizon = 2, nsim = 0)
+  expect_equal(dy$effects$se_effect[1], sqrt(V["x", "x"]), ignore_attr = TRUE)
+  g <- c(0, b[["x"]], b[["y_lag1"]], 1)[match(names(b),
+         c("(Intercept)", "y_lag1", "x", "x_lag1"))]
+  expect_equal(dy$effects$se_effect[2], sqrt(drop(t(g) %*% V %*% g)))
+})
+
+test_that("median-lag interval by simulation", {
+  fit <- adl(y ~ x, data = adl_sim, order = c(1, 3))
+  set.seed(3)
+  d1 <- adl_dynamics(fit, nsim = 300)
+  set.seed(3)
+  d2 <- adl_dynamics(fit, nsim = 300)
+  expect_identical(d1$summary, d2$summary)
+  s <- d1$summary
+  expect_true(is.integer(s$median_lag_low))
+  expect_lte(s$median_lag_low, s$median_lag_high)
+  expect_gte(s$median_lag_undefined, 0)
+  expect_lte(s$median_lag_undefined, 1)
+  d0 <- adl_dynamics(fit, nsim = 0)
+  expect_true(is.na(d0$summary$median_lag_low))
+  expect_false(anyNA(d0$summary$se_mean_lag))
+})
+
+test_that("se = FALSE keeps the point-estimate output", {
+  fit <- dyn_fit()
+  dy <- adl_dynamics(fit, horizon = 5, se = FALSE)
+  expect_named(dy$effects, c("variable", "lag", "effect", "cumulative",
+                             "pct_effect", "pct_cumulative"))
+  expect_named(dy$summary, c("variable", "long_run", "mean_lag", "median_lag",
+                             "horizon"))
+  expect_true(any(grepl("no standard errors", capture.output(print(dy)))))
+  expect_error(adl_dynamics(fit, se = FALSE, maxlags = 2), "only used")
+  expect_error(adl_dynamics(fit, nsim = -1), "nsim")
+  expect_error(adl_dynamics(fit, alpha = 2), "alpha")
+})
+
+test_that("unstable model: effects keep their standard errors, summaries are NA", {
+  fit <- dyn_fit()
+  fit$lm$coefficients[["y_lag1"]] <- 1.1
+  expect_warning(du <- adl_dynamics(fit, horizon = 5), "not dynamically stable")
+  expect_false(anyNA(du$effects$se_effect))
+  expect_true(all(is.na(du$summary$se_long_run)))
+  expect_true(all(is.na(du$summary$se_mean_lag)))
+  expect_true(all(is.na(du$summary$median_lag_low)))
+})
+
+test_that("confidence bands are drawn and can be switched off", {
+  fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
+  dy <- adl_dynamics(fit, nsim = 50)
+  pdf(NULL)
+  on.exit(dev.off())
+  expect_silent(plot(dy))
+  expect_silent(plot(dy, type = "cumulative", ci = FALSE))
+  expect_true(any(grepl("delta method", capture.output(print(dy)))))
+})

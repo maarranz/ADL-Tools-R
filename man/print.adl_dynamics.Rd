@@ -7,7 +7,7 @@
 \usage{
 \method{print}{adl_dynamics}(x, digits = 4, n = 12, ...)
 
-\method{plot}{adl_dynamics}(x, type = c("effects", "cumulative", "roots"), ...)
+\method{plot}{adl_dynamics}(x, type = c("effects", "cumulative", "roots"), ci = TRUE, ...)
 }
 \arguments{
 \item{x}{An \code{"adl_dynamics"} object.}
@@ -21,6 +21,10 @@
 \item{type}{\code{"effects"} (dynamic multipliers), \code{"cumulative"} (cumulative
 multipliers with the long-run multiplier as a dashed line) or
 \code{"roots"} (inverse roots and the unit circle).}
+
+\item{ci}{Draw the pointwise confidence band (the interval of each
+multiplier, at the level and with the distribution set in
+\code{\link[=adl_dynamics]{adl_dynamics()}}) when standard errors are available.}
 }
 \value{
 \code{x}, invisibly.

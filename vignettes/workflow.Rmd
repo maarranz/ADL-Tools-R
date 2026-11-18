@@ -179,6 +179,21 @@ comfac_test(fit, method = "Wald")
 
 Both reject: the dynamics are not just autocorrelated errors.
 
+Two members of the taxonomy can also be compared with each other when
+neither nests the other, as the AR(1) and the distributed lag. Each is a
+restriction of the ADL(1,1), but the J-test (ADL3) asks a different
+question: does either model account for what the other explains?
+
+```{r}
+pa  <- adl(y ~ x, data = adl_sim, order = c(1, 0))   # partial adjustment
+dl1 <- adl(y ~ x, data = adl_sim, order = c(0, 1))   # distributed lag
+j_test(pa, dl1, names = c("PA", "DL(1)"))
+```
+
+Both directions reject: neither restricted model encompasses the other,
+which agrees with the Wald tests above, where both restrictions were
+rejected against the ADL(1,1).
+
 ## 5. Can we condition on x? (ADL1, ADL3)
 
 Weak exogeneity asks whether $x$ responds to the equilibrium error, so
@@ -261,7 +276,22 @@ adl_long_run(fit)
 The estimate, 1.37, is close to the true 1.4, and its 95% interval
 (delta method) contains both 1 and 1.4.
 
+The same model in error correction form, with the speed of adjustment $b$
+and the equilibrium error:
+
 ```{r, fig.width = 7, fig.height = 4}
+ecm <- adl_ecm(fit)
+ecm
+plot(ecm$ec, ylab = "Equilibrium error")
+```
+
+About half of any gap from equilibrium is closed each quarter
+($\hat b = -0.53$); the ECM coefficients are those of the ADL rearranged,
+so their standard errors are exact, and $k$ is the long-run multiplier
+above.
+
+```{r, fig.width = 7, fig.height = 4}
+set.seed(1)  # the median-lag interval is simulated
 dyn <- adl_dynamics(fit)
 dyn
 plot(dyn, type = "cumulative")
@@ -270,7 +300,11 @@ plot(dyn, type = "roots")
 
 Half of the long-run effect is reached after one quarter (median lag) and
 99% after six; the single inverse root, 0.47, lies well inside the unit
-circle.
+circle. The standard errors of the multipliers and of the mean lag come
+from the delta method, and the grey band in the plot is the pointwise 95%
+interval. The median lag is an integer, so its interval (one to two
+quarters) comes instead from simulated draws of the coefficients, hence
+the `set.seed()`.
 
 ## 7. The same steps, in the chapters
 
@@ -281,10 +315,11 @@ circle.
 | Diagnostics | `adl_diagnostics()`, `bg_test()`, `arch_test()`, `reset_test()`, `jb_test()` | ADL3 |
 | Stability | `cusum_test()`, `cusumsq_test()`, `hansen_test()`, `chow_break_test()`, `chow_forecast_test()` | ADL3, ADL4 |
 | Restrictions | `adl_joint_test()`, `comfac_test()` | ADL2 |
+| Non-nested models | `j_test()` | ADL3 |
 | Exogeneity | `weak_exogeneity_test()`, `wu_hausman_test()`, `super_exogeneity_test()` | ADL1, ADL3 |
 | Outliers and breaks | `adl_outliers()` | (beyond the chapters) |
 | Causality | `granger_test()` (see `vignette("granger")`) | ADL3 |
-| Long run, dynamics | `adl_long_run()`, `adl_dynamics()` | ADL2 |
+| Long run, ECM, dynamics | `adl_long_run()`, `adl_ecm()`, `adl_dynamics()` | ADL2 |
 
 ## What this does not cover
 

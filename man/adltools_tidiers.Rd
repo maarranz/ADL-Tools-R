@@ -9,6 +9,10 @@
 \alias{glance.granger_test}
 \alias{tidy.adl_dynamics}
 \alias{glance.adl_dynamics}
+\alias{tidy.adl_ecm}
+\alias{glance.adl_ecm}
+\alias{tidy.j_test}
+\alias{glance.j_test}
 \title{Tidy and glance methods}
 \usage{
 \method{tidy}{adl}(x, conf.int = TRUE, conf.level = 0.95, ...)
@@ -24,6 +28,14 @@
 \method{tidy}{adl_dynamics}(x, ...)
 
 \method{glance}{adl_dynamics}(x, ...)
+
+\method{tidy}{adl_ecm}(x, ...)
+
+\method{glance}{adl_ecm}(x, ...)
+
+\method{tidy}{j_test}(x, ...)
+
+\method{glance}{j_test}(x, ...)
 }
 \arguments{
 \item{x}{An object from adltools.}

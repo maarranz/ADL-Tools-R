@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{A result of \code{\link[=cusum_test]{cusum_test()}} or \code{\link[=cusumsq_test]{cusumsq_test()}}.}
 
-\item{...}{Passed to \code{\link[graphics:plot.default]{graphics::plot()}}.}
+\item{...}{Passed to \code{\link[graphics:plot]{graphics::plot()}}.}
 }
 \value{
 \code{x}, invisibly.

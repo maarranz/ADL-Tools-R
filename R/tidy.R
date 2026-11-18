@@ -125,3 +125,35 @@ glance.adl_dynamics <- function(x, ...) {
   out$max_inverse_root <- if (nrow(x$roots)) max(x$roots$inverse_modulus) else 0
   out
 }
+
+#' @rdname adltools_tidiers
+#' @export
+tidy.adl_ecm <- function(x, ...) {
+  rbind(cbind(part = "ecm", x$coefficients),
+        cbind(part = "equilibrium", x$equilibrium))
+}
+
+#' @rdname adltools_tidiers
+#' @export
+glance.adl_ecm <- function(x, ...) {
+  eq <- x$equilibrium
+  data.frame(y = x$y, model = x$label, b = eq$estimate[eq$term == "b"],
+             stable = x$stable, cov_type = x$cov_type, maxlags = x$maxlags,
+             dist = x$dist, nobs = x$nobs)
+}
+
+#' @rdname adltools_tidiers
+#' @export
+tidy.j_test <- function(x, ...) {
+  x$tests
+}
+
+#' @rdname adltools_tidiers
+#' @export
+glance.j_test <- function(x, ...) {
+  data.frame(model_a = x$formulas[1], model_b = x$formulas[2],
+             outcome = x$outcome, interpretation = x$interpretation,
+             alpha = x$alpha, dist = x$dist, cov_type = x$cov_type,
+             maxlags = x$maxlags, nobs = x$nobs, start = x$sample[1],
+             end = x$sample[2])
+}

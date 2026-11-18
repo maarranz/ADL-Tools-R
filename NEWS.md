@@ -1,3 +1,28 @@
+# adltools 0.5.0
+
+* `j_test()`: the J-test of Davidson and MacKinnon (1981) for two
+  non-nested models (ADL3), run in both directions on their common sample,
+  with the four-outcome reading of the chapter. Takes `adl` fits or
+  `dynlm` fits (so an AR(1) can be compared with a distributed lag), with
+  conventional or HAC standard errors. Nested models are refused, with a
+  pointer to `adl_joint_test()`. `tidy()` and `glance()` methods.
+* `adl_ecm()`: the error correction form of a fitted ADL (ADL2), for any
+  orders and several regressors: the adjustment coefficient b, the
+  B_i(1) on the lagged levels and the coefficients of the lagged
+  differences, with exact standard errors (the ECM is a linear
+  reparametrization, so they equal those of the ECM regression, with
+  either covariance). Also the equilibrium-error form (b and the long-run
+  multipliers k_i) and the equilibrium error as a series. `tidy()` and
+  `glance()` methods.
+* `adl_dynamics()` reports standard errors: delta method for the dynamic and
+  cumulative multipliers, the long-run multiplier and the mean lag (with
+  `cov_type`, `maxlags`, `alpha` and `dist` as in the other inference
+  functions), and a simulated interval for the median lag, which is an
+  integer and has no derivative (`nsim` draws from the asymptotic
+  distribution of the coefficients; the share of draws where it is
+  undefined is reported). `plot()` draws the pointwise confidence band
+  (`ci = FALSE` to omit it). `se = FALSE` gives the previous output.
+
 # adltools 0.4.0
 
 * `adl_outliers()`: impulse and step dummies in the ADL equation, found by a
