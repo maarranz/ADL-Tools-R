@@ -31,7 +31,7 @@ An object of class \code{"adltools_test"}. For LR it also holds
 data frame of the restricted model's coefficients: \eqn{c}, \eqn{\phi},
 \eqn{\delta_i}, \eqn{\omega}), \code{rss_restricted} and
 \code{rss_unrestricted}; the Wald form does not estimate the restricted
-model.
+model and holds \code{constraints} (the values of Sargan's determinants).
 }
 \description{
 Tests whether the lag polynomials of the ADL model share a common factor
@@ -55,15 +55,43 @@ consecutive lags of each regressor.
 nonlinear least squares on the same sample, and
 \eqn{LR = T \log(RSS_r/RSS_u) \sim \chi^2_{rn}}. It does not depend on
 how the restriction is written and handles complex common roots.
-\item \code{method = "Wald"}: available for \eqn{r = 1} and models with one lag of
-\eqn{y} and lags 0 and 1 of each regressor, testing
-\eqn{\alpha_1 \beta_{i0} + \beta_{i1} = 0} with the delta method, as in
-ADL2. Wald tests of nonlinear restrictions depend on how the
-restriction is written (Gregory and Veall, 1985); the LR test does not.
+\item \code{method = "Wald"}: Sargan's (1980) determinantal form, for any order
+\eqn{r} and any number of regressors, with the unrestricted ADL only
+(no restricted model is estimated). The polynomials \eqn{C(z)} and
+\eqn{B_i(z)} (without leading zeros) have a common factor of degree
+\eqn{r} if and only if a matrix of their shifted coefficients has a
+given rank; Sargan's elimination algorithm (sections 3-4 of the paper:
+the matrices \eqn{\Psi(k)} for his Type 1 cases and
+\eqn{\Psi_b} for Type 2, with "vanishing rows") turns that into
+exactly \eqn{r n} determinants that must be zero. They are tested
+jointly by the delta method, with exact derivatives (sums of
+cofactors). For the ADL(1,1) the single determinant is
+\eqn{\alpha_1 \beta_0 + \beta_1}, the restriction of ADL2; for one
+regressor and \eqn{r = 1} it is the resultant of \eqn{C} and \eqn{B}.
+The determinants are returned in \code{constraints}.
 }
 
-Test \eqn{r = 1, 2, \dots} in sequence (Sargan, 1980). Intercepts are
-left free; models with unlagged terms or a trend are not supported yet.
+The Wald test does not need the restricted model, which may have
+several local optima when \eqn{r} is too small or the common roots are
+complex (Sargan, 1980, section 5). But Wald tests of nonlinear restrictions
+depend on how the restrictions are written (Gregory and Veall, 1985): the
+statistic here follows Sargan's construction (polynomials ordered by
+degree, \eqn{C} first among equals), and another program may write the
+same hypothesis differently. In small samples it tends to under-reject
+(about 3\% at the 5\% level with T = 200 in the simulations recorded in
+DESIGN.md; close to 5\% with T = 1000).
+
+\strong{Choosing r.} Sargan (1980, section 5) shows that if the true order is
+\eqn{\bar r}, the Wald test is asymptotically valid for
+\eqn{r \ge \bar r}, but for \eqn{r < \bar r} the constraints and their
+derivatives vanish together, the statistic is not
+\eqn{\chi^2}, and it is biased downward. Differences between successive
+Wald statistics are therefore not \eqn{\chi^2} either. Compute the tests
+for \eqn{r = 1, 2, \dots} and read them together, as in Sargan's
+Table I, rather than as a sequence of independent tests.
+
+Intercepts are left free; models with unlagged terms or a trend are not
+supported yet.
 }
 \examples{
 fit <- adl(y ~ x, data = adl_sim, order = c(1, 1))
@@ -71,6 +99,9 @@ comfac_test(fit)
 comfac_test(fit, method = "Wald")
 fit2 <- adl(y ~ x, data = adl_sim, order = c(2, 2))
 comfac_test(fit2, r = 2)
+
+# Sargan's Wald tests for r = 1, 2, read together
+sapply(1:2, function(r) comfac_test(fit2, r = r, method = "Wald")$statistic)
 }
 \references{
 Sargan, J. D. (1980). Some tests of dynamic specification for

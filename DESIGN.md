@@ -221,9 +221,27 @@ Follows the direct (Sargent, 1976) procedure of ADL3, not
     minimized by a grid over the stationary region plus local refinement
     (checked against full NLS from random starts). Invariant, handles
     complex roots.
-  - **Wald**: for the ADL(1,1), the ADL2 formula α₁β₀ + β₁ = 0, so students
-    can reproduce the chapter. General Wald later, in Sargan's determinantal
-    form (no choice of root; comparable with PcGive).
+  - **Wald** (general since v0.7.0): Sargan's (1980) determinantal form.
+    Polynomials ψ_j = C and the B_i without leading zeros, ordered by
+    degree (C first among equals). Type 1 (Σ(f_j − r) > (n−1)(f−r)):
+    rows of Ψ(k), eq. (8), first f + k + n − r of them; Type 2: Ψ_b (rows
+    of Ψ₀ by decreasing right zeros), surplus vanishing rows dropped.
+    Elimination row by row, tracking each reduced row's support (a pivot
+    brings in its columns); a row with r elements left is vanishing; each
+    element gives one determinant (pivot rows + row, pivot columns + its
+    column) = algorithmic value × pivots. r·n determinants; derivatives
+    exact (cofactors). ADL(1,1): α₁β₀ + β₁ (same statistic as the v0.2
+    formula); one regressor, r = 1: the Sylvester resultant.
+  - Checks: 63 random specifications (25 Type 1, 38 Type 2; 1–3
+    regressors, p ≤ 4, dead-start regressors, r ≤ 3): constraints zero at
+    an exact common factor, Jacobian of full rank r·n. Size (5% level,
+    static regression with AR errors): ADL(2,2), r = 1: 0.032 (T = 200,
+    2000 reps), 0.051 (T = 1000), 0.048 (T = 5000); ADL(3,3), r = 2: 0.030,
+    0.042; ADL(2,2,2), r = 1: 0.030, 0.056. LR at T = 200: 0.04–0.07.
+  - Not yet checked against PcGive output (Sargan's own example uses data
+    not available to us). Bordering the leading square alone fails with
+    two or more regressors (the square is singular under H0), which is why
+    the vanishing-row algorithm is needed.
   - Output includes the restricted model's ω̂ (AR error coefficients).
   - Sequential testing r = 1, 2, … as in Sargan (1980).
 - Documentation notes that Wald tests of nonlinear restrictions are not
@@ -293,8 +311,13 @@ Decided 2026-11-17:
   never fewer.
   Shares its engine with automatic lag selection in
   `granger_test_general()` and the sequential COMFAC search.
-- **Tier 2** — term-by-term multi-path search through an adapter to the
-  `gets` package (`arx()`, `getsm()`), returning an `adl` fit. `gets` in
+- **Tier 2, `adl_getsm(fit)`** (v0.7.0) — the GUM's design matrix to
+  `gets::arx()` (mconst for the intercept), `gets::getsm()` with `keep` =
+  intercept, unlagged terms, trend and (default) every x_t; t.pval =
+  `alpha`; Ljung-Box AR/ARCH diagnostics at 2.5% (gets' default); terminals
+  by BIC (`ic`). Selected columns refitted with `adl(lags = ...)` on the
+  GUM's data and `max_lag` (same sample; gaps allowed); coefficients equal
+  getsm's. If every regressor is dropped, `fit = NULL`. `gets` in
   Suggests.
 - Documentation notes that post-selection standard errors are conditional on
   the search.
@@ -390,6 +413,13 @@ Outlier detection: `adl_outliers()` (section 9).
 | `R/forecast.R` | `adl_forecast()`, `next_index()` (extends a regular index), print and fan-chart plot |
 | `R/granger.R` | formula interface and conditioning variables (`parse_granger_formula()`, `cond_lags`) |
 
+**v0.7.0 files**
+
+| File | Contents |
+|:--|:--|
+| `R/comfac.R` | `sargan_structure()` (rows of Ψ(k) or Ψ_b, elimination with vanishing rows, the determinants), `sargan_constraints()` (values and exact Jacobian) |
+| `R/getsm.R` | `adl_getsm()`: adapter to `gets::arx()`/`getsm()`, refit as `adl` |
+
 **Testing.** Development tests run in a Linux R installation in the
 assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 
@@ -426,7 +456,9 @@ assistant's workspace; final `R CMD check --as-cran` on the M1 Pro and CI.
 - **v0.6.0** (released 2026-11-18) — `adl_forecast()` (dynamic forecasts
   on a known path of x, ψ-weight variance, fan charts); Granger with
   conditioning variables (`y ~ x | z`) and a formula interface.
-- **Next** — v0.7.0: Sargan's general COMFAC Wald; `gets` adapter (tier 2).
+- **v0.7.0** (released 2026-11-18) — Sargan's (1980) determinantal COMFAC
+  Wald test for any r and n; `adl_getsm()` (tier 2 Gets through the `gets`
+  package).
 - **Later** — parameter uncertainty in forecast variances (Lütkepohl
   2005, section 3.5).
 - **Elsewhere** — forecastingtools: `static_forecast()` for ADL fits and the

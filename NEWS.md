@@ -1,3 +1,22 @@
+# adltools 0.7.0
+
+* `adl_getsm()`: term-by-term, multi-path general-to-specific search
+  through `gets::getsm()` (tier 2 of the Gets design). Takes a general ADL
+  fit, searches its terms one by one (so a lag can stay without the ones
+  before it), and refits the selection as an `adl` on the same sample.
+  The intercept, unlagged terms, the trend and (by default) every x_t are
+  never tested; `keep` adds others. `adl_gets()` remains the lag-by-lag
+  procedure of ADL3.
+* `comfac_test(method = "Wald")` is now Sargan's (1980) determinantal Wald
+  test, for any order r and any number of regressors (it was limited to the
+  ADL(1,1)). The common-factor hypothesis is written as r * n determinants
+  of shifted coefficient rows, following Sargan's elimination algorithm
+  (Type 1 and Type 2 cases, vanishing rows), with exact derivatives. For the
+  ADL(1,1) it is the chapter's alpha_1 beta_0 + beta_1 = 0, with the same
+  statistic as before. The help page explains Sargan's warning on reading
+  the tests for successive r. The determinants are returned in
+  `constraints`.
+
 # adltools 0.6.0
 
 * `granger_test()` and `granger_test_general()` accept a formula, `y ~ x`,

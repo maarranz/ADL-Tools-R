@@ -86,8 +86,6 @@ test_that("argument checks", {
   d <- sim_comfac()
   expect_error(comfac_test(adl(y ~ x, data = d, order = c(1, 1)), r = 2), "p >= 2")
   expect_error(comfac_test(adl(y ~ x, data = d, order = c(1, 0))), "consecutive lags")
-  expect_error(comfac_test(adl(y ~ x, data = d, order = c(2, 2)), method = "Wald"),
-               "use method")
   expect_output(print(comfac_test(adl(y ~ x, data = d, order = c(1, 1)))),
                 "alpha_1 \\* beta_0 \\+ beta_1 = 0")
 })
@@ -102,4 +100,94 @@ test_that("COMFAC: Wald needs no optimizer; RNG state is preserved (audit)", {
   f3 <- adl(y ~ x, data = d, order = c(3, 3))
   invisible(comfac_test(f3, r = 3))
   expect_equal(runif(1), a)
+})
+
+# Sargan's determinantal Wald form -------------------------------------------
+
+pmul <- function(a, b) {
+  o <- numeric(length(a) + length(b) - 1)
+  for (i in seq_along(a)) o[i:(i + length(b) - 1)] <- o[i:(i + length(b) - 1)] + a[i] * b
+  o
+}
+
+test_that("Wald: the ADL(1,1) formula of ADL2, with one and two regressors", {
+  set.seed(3)
+  n <- 300
+  x1 <- rnorm(n); x2 <- rnorm(n)
+  y <- as.numeric(stats::filter(0.6 * x1 + 0.2 * c(0, x1[-n]) + 0.3 * x2 + rnorm(n),
+                                0.5, method = "recursive"))
+  d <- stats::ts(cbind(y = y, x1 = x1, x2 = x2))
+  for (f in list(adl(y ~ x1, data = d, order = c(1, 1)),
+                 adl(y ~ x1 + x2, data = d, order = c(1, 1, 1)))) {
+    b <- coef(f); V <- vcov(f); a1 <- b[["y_lag1"]]
+    g <- vapply(f$x, function(v) a1 * b[[v]] + b[[paste0(v, "_lag1")]], 1)
+    G <- t(vapply(f$x, function(v) {
+      r <- stats::setNames(numeric(length(b)), names(b))
+      r["y_lag1"] <- b[[v]]; r[v] <- a1; r[paste0(v, "_lag1")] <- 1
+      r
+    }, numeric(length(b))))
+    W <- drop(t(g) %*% solve(G %*% V %*% t(G), g))
+    w <- comfac_test(f, method = "Wald")
+    expect_equal(w$statistic, W)
+    expect_equal(w$df, length(f$x))
+  }
+})
+
+test_that("Wald: one regressor, two polynomials, r = 1 is the Sylvester resultant", {
+  d <- sim_comfac()
+  fit <- adl(y ~ x, data = d, order = c(2, 2))
+  b <- coef(fit)
+  C <- c(1, -b[["y_lag1"]], -b[["y_lag2"]])
+  B <- c(b[["x"]], b[["x_lag1"]], b[["x_lag2"]])
+  S <- rbind(c(C, 0), c(B, 0), c(0, C), c(0, B))
+  w <- comfac_test(fit, method = "Wald")
+  expect_equal(abs(w$constraints), abs(det(S)))
+})
+
+test_that("Wald: constraints vanish at a common factor, Jacobian of full rank", {
+  set.seed(5)
+  N <- 120
+  base <- stats::ts(cbind(y = rnorm(N), x1 = rnorm(N), x2 = rnorm(N)))
+  specs <- list(
+    list(lags = list(y = 1:3, x1 = 0:2, x2 = 0:3), r = 1),      # type 1, unequal
+    list(lags = list(y = 1:3, x1 = 0:2, x2 = 0:3), r = 2),
+    list(lags = list(y = 1:3, x1 = 1:2, x2 = 0:1), r = 1),      # type 2, dead start
+    list(lags = list(y = 1:2, x1 = 0:2, x2 = 0:2), r = 2))
+  for (sp in specs) {
+    fit <- adl(y ~ x1 + x2, data = base, lags = sp$lags)
+    b <- coef(fit)
+    r <- sp$r
+    st <- sargan_structure(fit, r, names(b))
+    om <- 1
+    for (h in seq_len(r)) om <- pmul(om, c(1, -runif(1, -0.8, 0.8)))
+    p <- length(sp$lags$y)
+    C <- pmul(om, c(1, -runif(p - r, -0.4, 0.4)))
+    bb <- b
+    bb[paste0("y_lag", seq_len(p))] <- -C[-1]
+    for (v in c("x1", "x2")) {
+      l <- sp$lags[[v]]
+      bb[ifelse(l == 0, v, paste0(v, "_lag", l))] <- pmul(om, rnorm(length(l) - r))
+    }
+    con <- sargan_constraints(bb, st)
+    expect_length(con$phi, 2 * r)
+    expect_lt(max(abs(con$phi)), 1e-12)
+    expect_equal(qr(con$G)$rank, 2 * r)
+    # exact derivatives
+    Gn <- vapply(seq_along(b), function(j) {
+      e <- numeric(length(b)); e[j] <- 1e-6
+      (sargan_constraints(bb + e, st)$phi - sargan_constraints(bb - e, st)$phi) / 2e-6
+    }, numeric(2 * r))
+    expect_equal(con$G, matrix(Gn, nrow = 2 * r), tolerance = 1e-6)
+  }
+})
+
+test_that("Wald: general orders, HAC, and the order of the restrictions", {
+  d <- sim_comfac()
+  fit <- adl(y ~ x, data = d, order = c(3, 3))
+  for (r in 1:3) {
+    w <- comfac_test(fit, r = r, method = "Wald")
+    expect_equal(w$df, r)
+    expect_length(w$constraints, r)
+  }
+  expect_equal(comfac_test(fit, r = 2, method = "Wald", cov_type = "HAC")$cov_type, "HAC")
 })

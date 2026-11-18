@@ -337,7 +337,7 @@ treated as known, and so is the path of $x$.
 
 | Step | Function | Chapter |
 |:--|:--|:--|
-| Lag orders | `adl_ic()`, `adl_gets()` | ADL3 (information criteria, Gets) |
+| Lag orders | `adl_ic()`, `adl_gets()`, `adl_getsm()` | ADL3 (information criteria, Gets; multi-path with the `gets` package) |
 | Estimation | `adl()`, `summary()` | ADL1 |
 | Diagnostics | `adl_diagnostics()`, `bg_test()`, `arch_test()`, `reset_test()`, `jb_test()` | ADL3 |
 | Stability | `cusum_test()`, `cusumsq_test()`, `hansen_test()`, `chow_break_test()`, `chow_forecast_test()` | ADL3, ADL4 |

@@ -4,7 +4,7 @@
 
 Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, developed for **Applied Time Series Econometrics (ATSE)** at **Universidad Carlos III de Madrid**.
 
-> **Status: version 0.6.0.** Formulation, estimation, inference, the ECM form, dynamic effects with standard errors, dynamic forecasts with fan charts, the J-test for non-nested models, Granger non-causality (with conditioning variables and automatic lag selection), residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test and exogeneity tests (weak, strong, super), outlier and break detection, and general-to-specific lag selection. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
+> **Status: version 0.7.0.** Formulation, estimation, inference, the ECM form, dynamic effects with standard errors, dynamic forecasts with fan charts, the J-test for non-nested models, Granger non-causality (with conditioning variables and automatic lag selection), residual diagnostics, CUSUM, CUSUM-of-squares, Hansen and Chow tests, the generalized COMFAC test (LR and Sargan's Wald) and exogeneity tests (weak, strong, super), outlier and break detection, and general-to-specific lag selection. The design decisions are recorded in [`DESIGN.md`](DESIGN.md).
 
 ## Scope
 
@@ -17,13 +17,13 @@ Teaching-oriented R tools for **autoregressive distributed lag (ADL)** models, d
 | Error correction form | `adl_ecm()`: the fitted ADL rewritten as an ECM (exact standard errors), with the speed of adjustment, the long-run multipliers and the equilibrium error |
 | Dynamic effects | `adl_dynamics()`: dynamic and cumulative multipliers, mean and median lag, with standard errors; inverse roots |
 | Lag orders | `adl_ic()`: AIC, BIC and Hannan–Quinn on a common sample, with and without the contemporaneous regressor |
-| General-to-specific | `adl_gets()`: from ADL(p, p) down, joint Wald tests of the highest lags, diagnostics at every step |
+| General-to-specific | `adl_gets()`: from ADL(p, p) down, joint Wald tests of the highest lags, diagnostics at every step (ADL3); `adl_getsm()`: term-by-term multi-path search with the `gets` package |
 | Granger non-causality | `granger_test()`, `granger_test_general()`: Sargent's direct procedure and the eight causal types; conditioning variables with `y ~ x \| z`; orders by BIC/AIC/HQ or Gets with `select` |
 | Diagnostics | `adl_diagnostics()`, `bg_test()` (Breusch–Godfrey), `arch_test()` (ARCH-LM), `reset_test()` (RESET), `jb_test()` (Jarque–Bera) |
 | Stability | `cusum_test()`, `cusumsq_test()` (with plots), `hansen_test()` (per parameter, no break date), `chow_break_test()`, `chow_forecast_test()` (static 1-step or dynamic N-step) |
 | Non-nested models | `j_test()`: the J-test in both directions, with the four-outcome reading of the chapters; `adl` or `dynlm` fits |
 | Forecasting | `adl_forecast()`: dynamic forecasts on a given path of the regressors, ψ-weight standard errors and fan charts |
-| Common factors | `comfac_test()`: COMFAC of any order (LR), and the ADL(1,1) Wald form of the chapters |
+| Common factors | `comfac_test()`: COMFAC of any order, LR or Sargan's determinantal Wald test (the chapters' ADL(1,1) restriction as a special case) |
 | Outliers and breaks | `adl_outliers()` (impulse and step dummies; own search or `gets::isat()`) |
 | Exogeneity | `wu_hausman_test()` (predeterminedness), `weak_exogeneity_test()` (weak, and strong with `strong = TRUE`), `super_exogeneity_test()` (invariance to breaks in the marginal process) |
 | Existing fits | `as_adl()` converts a `dynlm` fit |
