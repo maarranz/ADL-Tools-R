@@ -190,7 +190,21 @@ wu_hausman_test <- function(fit, x = NULL, instruments,
 #' estimated long-run multipliers. The strong test adds the lagged changes
 #' of \eqn{y} to the null, within this same conditioning set.
 #'
-#' The test needs a stable model (there is no equilibrium error otherwise)
+#' **A supplied equilibrium error** (`ec =`), for instance the residual
+#' \eqn{\hat z_t} of a cointegrating regression, replaces the one built from
+#' the ADL's long-run multipliers; give it at time \eqn{t} (it is lagged
+#' here), as a `ts` or `zoo` series matched by date, or as a vector with one
+#' value per row of the fit's data. The model then need not be stable.
+#' Note that with `x_level = TRUE`, any \eqn{ec} that is a linear
+#' combination of \eqn{y} and the model's regressors (plus constant or
+#' trend) gives the same \eqn{\hat\kappa} and test, since \eqn{\kappa} is
+#' then the coefficient of \eqn{y_{t-1}} given the levels; a supplied
+#' \eqn{\hat z} makes a difference with `x_level = FALSE`, the ADL3 form for
+#' cointegrated I(1) variables. \eqn{\hat z} is a generated regressor:
+#' conventional inference on \eqn{\kappa} is justified when it comes from a
+#' super-consistent cointegrating regression, not in general.
+#'
+#' Without `ec`, the test needs a stable model (there is no equilibrium error otherwise)
 #' and an adequate marginal equation: choose `lags` so that \eqn{\nu_t} is
 #' free of serial correlation (the marginal regression is returned in
 #' `$marginal` for checking). It addresses the part of weak exogeneity the
@@ -204,12 +218,16 @@ wu_hausman_test <- function(fit, x = NULL, instruments,
 #' @param strong Test strong exogeneity instead of weak?
 #' @param x_level Include \eqn{x_{t-1}} in the marginal regression (see
 #'   Details).
+#' @param ec Optional equilibrium error at time \eqn{t} (a `ts`/`zoo`
+#'   series, or a vector with one value per row of the fit's data) to use
+#'   instead of the one implied by the long-run multipliers (see Details).
 #' @inheritParams adl_vcov
 #' @param dist For the weak test, `"normal"` (default) or `"t"`; for the
 #'   strong test, `"chisq"` (default) or `"F"`.
 #' @param alpha Significance level for the decision.
-#' @return An object of class `"adltools_test"`, with `kappa` and the
-#'   marginal regression (`marginal`, an `lm` object).
+#' @return An object of class `"adltools_test"`, with `kappa`, the
+#'   marginal regression (`marginal`, an `lm` object) and `ec_source`
+#'   (`"adl"` or `"supplied"`).
 #' @references Urbain, J.-P. (1992). On weak exogeneity in error correction
 #'   models. *Oxford Bulletin of Economics and Statistics*, 54(2), 187-207.
 #'
@@ -222,7 +240,7 @@ wu_hausman_test <- function(fit, x = NULL, instruments,
 #' weak_exogeneity_test(fit, strong = TRUE)
 #' @export
 weak_exogeneity_test <- function(fit, x = NULL, lags = 1, strong = FALSE,
-                                 x_level = TRUE,
+                                 x_level = TRUE, ec = NULL,
                                  cov_type = c("nonrobust", "HAC"),
                                  maxlags = NULL, dist = NULL, alpha = 0.05) {
   check_adl(fit)
@@ -237,7 +255,7 @@ weak_exogeneity_test <- function(fit, x = NULL, lags = 1, strong = FALSE,
   dist <- dist %||% if (strong) "chisq" else "normal"
   dist <- match.arg(dist, if (strong) c("chisq", "F") else c("normal", "t"))
 
-  df <- marginal_frame(fit, x, lags, x_level)
+  df <- marginal_frame(fit, x, lags, x_level, ec)
   marg <- stats::lm(dx ~ ., data = df)
   n <- nrow(df)
   lg <- hac_lags(maxlags, cov_type, n)
@@ -267,7 +285,8 @@ weak_exogeneity_test <- function(fit, x = NULL, lags = 1, strong = FALSE,
     null_hypothesis = h0,
     alpha = alpha, reject_null = inf$p.value < alpha, nobs = n,
     cov_type = cov_type, maxlags = lg, n_restrictions = q, df_resid = dfr,
-    kappa = b[["ec_lag1"]], marginal = marg
+    kappa = b[["ec_lag1"]], marginal = marg,
+    ec_source = if (is.null(ec)) "adl" else "supplied"
   ), inf), title)
 }
 
@@ -275,19 +294,24 @@ weak_exogeneity_test <- function(fit, x = NULL, lags = 1, strong = FALSE,
 #' exogeneity tests). Returns a data frame with `dx` first and the index of
 #' its rows in attribute "index".
 #' @noRd
-marginal_frame <- function(fit, x, lags, x_level) {
-  if (!is_stable(fit)) {
-    stop("The model is not dynamically stable, so there is no long-run ",
-         "relation and no equilibrium error to test against.", call. = FALSE)
-  }
-  lr <- adl_long_run(fit)
-  k <- stats::setNames(lr$estimate, lr$term)
+marginal_frame <- function(fit, x, lags, x_level, ec = NULL) {
   z <- zoo::coredata(fit$data)
   N <- nrow(z)
-  # equilibrium error from y and the distributed-lag regressors; the
-  # intercept, controls and trend enter the marginal equation directly,
-  # which gives the same kappa as building their long-run terms into ec
-  ec <- z[, fit$y] - as.numeric(z[, fit$x, drop = FALSE] %*% k[fit$x])
+  if (is.null(ec)) {
+    if (!is_stable(fit)) {
+      stop("The model is not dynamically stable, so there is no long-run ",
+           "relation and no equilibrium error to test against (supply one ",
+           "with `ec =`).", call. = FALSE)
+    }
+    lr <- adl_long_run(fit)
+    k <- stats::setNames(lr$estimate, lr$term)
+    # equilibrium error from y and the distributed-lag regressors; the
+    # intercept, controls and trend enter the marginal equation directly,
+    # which gives the same kappa as building their long-run terms into ec
+    ec <- z[, fit$y] - as.numeric(z[, fit$x, drop = FALSE] %*% k[fit$x])
+  } else {
+    ec <- align_ec(ec, fit)
+  }
   lagv <- function(v, j) c(rep(NA, j), v[seq_len(N - j)])
   dv <- function(v) c(NA, diff(z[, v]))
   # the test's own columns come first and keep their names; columns from
@@ -316,8 +340,47 @@ marginal_frame <- function(fit, x, lags, x_level) {
   # same observations as the ADL fit where possible
   keep <- stats::complete.cases(df) & zoo::index(fit$data) %in% fit$index
   df <- df[keep, , drop = FALSE]
+  if (nrow(df) <= ncol(df)) {
+    stop("Too few observations for the marginal regression (", nrow(df),
+         ").", call. = FALSE)
+  }
   attr(df, "index") <- zoo::index(fit$data)[keep]
   df
+}
+
+#' A supplied equilibrium error, as one value per row of the fit's data
+#'
+#' A `ts` or `zoo` series is matched by date (dates outside its range are
+#' NA); a plain numeric vector must have one value per row of `fit$data`.
+#' @noRd
+align_ec <- function(ec, fit) {
+  idx <- zoo::index(fit$data)
+  if (stats::is.ts(ec)) ec <- zoo::as.zoo(ec)
+  if (inherits(ec, "zoo")) {
+    if (NCOL(ec) != 1) stop("`ec` must be a single series.", call. = FALSE)
+    eidx <- standard_index(zoo::index(ec))
+    num <- function(i) class(i)[1] %in% c("integer", "numeric")
+    if (!identical(class(eidx), class(idx)) && !(num(eidx) && num(idx))) {
+      stop("The time index of `ec` is not of the same kind as that of the ",
+           "data.", call. = FALSE)
+    }
+    vals <- as.numeric(zoo::coredata(ec))
+    pos <- vapply(seq_along(idx), function(i) index_position(idx[i], eidx), 1L)
+    out <- vals[pos]
+  } else if (is.numeric(ec) && is.null(dim(ec))) {
+    if (length(ec) != length(idx)) {
+      stop("`ec` has ", length(ec), " values but the data of the fit have ",
+           length(idx), " rows: give it as a ts or zoo series to match it ",
+           "by date.", call. = FALSE)
+    }
+    out <- as.numeric(ec)
+  } else {
+    stop("`ec` must be a numeric vector, or a ts or zoo series.", call. = FALSE)
+  }
+  if (!any(is.finite(out[idx %in% fit$index]))) {
+    stop("`ec` has no values on the estimation sample of the fit.", call. = FALSE)
+  }
+  out
 }
 
 #' The regressor entering at lag 0 (default: the only one)

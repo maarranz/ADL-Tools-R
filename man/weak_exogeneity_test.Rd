@@ -10,6 +10,7 @@ weak_exogeneity_test(
   lags = 1,
   strong = FALSE,
   x_level = TRUE,
+  ec = NULL,
   cov_type = c("nonrobust", "HAC"),
   maxlags = NULL,
   dist = NULL,
@@ -29,6 +30,10 @@ equation.}
 \item{x_level}{Include \eqn{x_{t-1}} in the marginal regression (see
 Details).}
 
+\item{ec}{Optional equilibrium error at time \eqn{t} (a \code{ts}/\code{zoo}
+series, or a vector with one value per row of the fit's data) to use
+instead of the one implied by the long-run multipliers (see Details).}
+
 \item{cov_type}{\code{"nonrobust"} (conventional OLS, the default) or \code{"HAC"}
 (Newey-West, Bartlett kernel, no prewhitening, no small-sample
 adjustment).}
@@ -43,8 +48,9 @@ strong test, \code{"chisq"} (default) or \code{"F"}.}
 \item{alpha}{Significance level for the decision.}
 }
 \value{
-An object of class \code{"adltools_test"}, with \code{kappa} and the
-marginal regression (\code{marginal}, an \code{lm} object).
+An object of class \code{"adltools_test"}, with \code{kappa}, the
+marginal regression (\code{marginal}, an \code{lm} object) and \code{ec_source}
+(\code{"adl"} or \code{"supplied"}).
 }
 \description{
 Following ADL3 (and Urbain, 1992), computes the lagged equilibrium error
@@ -86,7 +92,21 @@ of \eqn{y_{t-1}} given the regressor levels, so it does not depend on the
 estimated long-run multipliers. The strong test adds the lagged changes
 of \eqn{y} to the null, within this same conditioning set.
 
-The test needs a stable model (there is no equilibrium error otherwise)
+\strong{A supplied equilibrium error} (\verb{ec =}), for instance the residual
+\eqn{\hat z_t} of a cointegrating regression, replaces the one built from
+the ADL's long-run multipliers; give it at time \eqn{t} (it is lagged
+here), as a \code{ts} or \code{zoo} series matched by date, or as a vector with one
+value per row of the fit's data. The model then need not be stable.
+Note that with \code{x_level = TRUE}, any \eqn{ec} that is a linear
+combination of \eqn{y} and the model's regressors (plus constant or
+trend) gives the same \eqn{\hat\kappa} and test, since \eqn{\kappa} is
+then the coefficient of \eqn{y_{t-1}} given the levels; a supplied
+\eqn{\hat z} makes a difference with \code{x_level = FALSE}, the ADL3 form for
+cointegrated I(1) variables. \eqn{\hat z} is a generated regressor:
+conventional inference on \eqn{\kappa} is justified when it comes from a
+super-consistent cointegrating regression, not in general.
+
+Without \code{ec}, the test needs a stable model (there is no equilibrium error otherwise)
 and an adequate marginal equation: choose \code{lags} so that \eqn{\nu_t} is
 free of serial correlation (the marginal regression is returned in
 \verb{$marginal} for checking). It addresses the part of weak exogeneity the

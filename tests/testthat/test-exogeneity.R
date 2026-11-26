@@ -161,3 +161,76 @@ test_that("a control named ec does not replace the equilibrium error (audit 2)",
   expect_equal(weak_exogeneity_test(adl(y ~ x | dx, data = d3, order = c(1, 1)))$kappa,
                w$kappa)
 })
+
+# Supplied equilibrium error (ec =) -------------------------------------------
+
+ec_data <- function(n = 300, seed = 81) {
+  set.seed(seed)
+  x <- cumsum(rnorm(n))
+  y <- 1 + 0.8 * x + as.numeric(stats::arima.sim(list(ar = 0.5), n))
+  stats::ts(cbind(y = y, x = x), start = c(1950, 1), frequency = 4)
+}
+
+test_that("ec = the ADL's own equilibrium error reproduces the default test", {
+  d <- ec_data()
+  fit <- adl(y ~ x, data = d, order = c(2, 2))
+  k <- adl_long_run(fit)
+  ec <- d[, "y"] - k$estimate[k$term == "x"] * d[, "x"]
+  for (xl in c(TRUE, FALSE)) for (st in c(FALSE, TRUE)) {
+    a <- weak_exogeneity_test(fit, x_level = xl, strong = st)
+    b <- weak_exogeneity_test(fit, x_level = xl, strong = st, ec = ec)
+    expect_equal(b$statistic, a$statistic)
+    expect_equal(b$kappa, a$kappa)
+    expect_equal(b$ec_source, "supplied")
+    expect_equal(a$ec_source, "adl")
+  }
+  # a plain vector, one value per row of the data
+  v <- weak_exogeneity_test(fit, x_level = FALSE, ec = as.numeric(ec))
+  expect_equal(v$statistic, weak_exogeneity_test(fit, x_level = FALSE)$statistic)
+})
+
+test_that("ec = a cointegrating residual: matters with x_level = FALSE only", {
+  d <- ec_data()
+  fit <- adl(y ~ x, data = d, order = c(2, 2))
+  z <- stats::ts(residuals(lm(y ~ x, data = as.data.frame(d))),
+                 start = c(1950, 1), frequency = 4)
+  ad <- weak_exogeneity_test(fit, x_level = FALSE)
+  sz <- weak_exogeneity_test(fit, x_level = FALSE, ec = z)
+  expect_false(isTRUE(all.equal(sz$kappa, ad$kappa)))
+  # with the level of x in the regression, any y - b x gives the same kappa
+  expect_equal(weak_exogeneity_test(fit, ec = z)$kappa,
+               weak_exogeneity_test(fit)$kappa)
+  # direct regression for the change in x
+  z1 <- stats::lag(z, -1)
+  m <- stats::ts.intersect(dx = diff(d[, "x"]), dx1 = stats::lag(diff(d[, "x"]), -1),
+                           dy1 = stats::lag(diff(d[, "y"]), -1), z1 = z1)
+  m <- as.data.frame(m)          # the fit's sample: from 1950(3)
+  ref <- lm(dx ~ dx1 + dy1 + z1, data = m)
+  expect_equal(sz$kappa, unname(coef(ref)["z1"]))
+})
+
+test_that("ec = is matched by date, and works for an unstable fit", {
+  d <- ec_data()
+  fit <- adl(y ~ x, data = d, order = c(1, 1))
+  z <- stats::ts(residuals(lm(y ~ x, data = as.data.frame(d))),
+                 start = c(1950, 1), frequency = 4)
+  # a shorter series covers part of the sample: fewer observations
+  zs <- stats::window(z, start = c(1960, 1))
+  w <- weak_exogeneity_test(fit, x_level = FALSE, ec = zs)
+  expect_lt(w$nobs, weak_exogeneity_test(fit, x_level = FALSE, ec = z)$nobs)
+  fit$lm$coefficients[["y_lag1"]] <- 1.02
+  expect_error(weak_exogeneity_test(fit), "not dynamically stable")
+  expect_s3_class(weak_exogeneity_test(fit, x_level = FALSE, ec = z), "adltools_test")
+})
+
+test_that("ec = input checks", {
+  d <- ec_data()
+  fit <- adl(y ~ x, data = d, order = c(1, 1))
+  expect_error(weak_exogeneity_test(fit, ec = 1:10), "300 rows")
+  expect_error(weak_exogeneity_test(fit, ec = cbind(a = 1:300, b = 1:300)), "numeric vector")
+  expect_error(weak_exogeneity_test(fit, ec = zoo::zoo(rnorm(300), as.Date("2000-01-01") + 0:299)),
+               "same kind")
+  expect_error(weak_exogeneity_test(fit, ec = stats::ts(rnorm(20), start = c(2100, 1), frequency = 4)),
+               "no values on the estimation sample")
+  expect_error(weak_exogeneity_test(fit, ec = "a"), "numeric vector")
+})

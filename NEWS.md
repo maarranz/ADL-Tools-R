@@ -1,3 +1,18 @@
+# adltools 0.7.3
+
+* Time column given as text (port of cointegrationtools 0.1.1, audit item
+  H04; `R/input.R` blocks kept identical in both packages): it must be ISO
+  dates (YYYY-MM-DD), checked to round-trip, and is converted to `Date`, so
+  the gap check applies to it. Other text is refused. An index of any other
+  unsupported class now stops with "Unsupported time index" instead of
+  passing the regularity check unchecked.
+* `weak_exogeneity_test(ec = )`: an equilibrium error can be supplied (for
+  instance the residual of a cointegrating regression), matched by date,
+  instead of the one built from the long-run multipliers; the model then
+  need not be stable. The help explains that with `x_level = TRUE` the
+  result does not depend on a linear ec, and the generated-regressor
+  caveat. The result reports `ec_source`.
+
 # adltools 0.7.2
 
 Fixes from the verification of the 0.7.1 corrections (V1-V4).

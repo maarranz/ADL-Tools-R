@@ -271,6 +271,13 @@ For each regressor x_i:
 - `weak_exogeneity_test(fit, lags = )`: builds ec_{t−1} = y_{t−1} − Σ k̂_i x_{i,t−1},
   regresses Δx_{i,t} on lags of Δx and Δy plus ec_{t−1}, tests κ = 0. Also
   reports the **strong-exogeneity** joint test (κ and all lagged Δy terms).
+  `ec =` (v0.7.3): a supplied equilibrium error (e.g. ẑ from
+  cointegrationtools' `coint_reg()`; the single engine proposed in its
+  DESIGN §3.4) replaces the ADL-implied one, matched by date; no stability
+  requirement then. With `x_level = TRUE` any linear ec in y and the
+  regressors gives the same κ̂ (κ = coefficient of y_{t−1} given the
+  levels), so a supplied ẑ matters with `x_level = FALSE` (the ADL3 form
+  for cointegrated I(1)).
 - `super_exogeneity_test()`: breaks in the marginal model of x_i summarized
   by impulse/step dummies (from the outlier/break tools), then those dummies
   tested in the conditional model (Engle and Hendry, 1993).

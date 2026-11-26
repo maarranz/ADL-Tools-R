@@ -200,7 +200,8 @@ check_regular <- function(idx) {
   } else if (is.numeric(idx)) {
     bad_step(as.numeric(idx))
   } else {
-    0L
+    stop("Unsupported time index of class '", class(idx)[1], "': use Date, ",
+         "POSIXct, yearmon, yearqtr, ts or a numeric index.", call. = FALSE)
   }
   if (k > 0L) {
     # milliseconds only for sub-second data (%OS truncates, hence the 5e-4)
@@ -307,7 +308,19 @@ df_to_zoo <- function(df, time = NULL) {
     if (!time %in% names(df)) {
       stop("Time column '", time, "' not found in the data.", call. = FALSE)
     }
-    idx <- standard_index(df[[time]])
+    tcol <- df[[time]]
+    if (is.character(tcol) || is.factor(tcol)) {
+      # dates written as text: accepted only as ISO dates (YYYY-MM-DD), so that
+      # the gap check below applies to them
+      tcol <- as.character(tcol)
+      d <- as.Date(tcol, optional = TRUE, tryFormats = "%Y-%m-%d")
+      if (anyNA(d) || any(format(d) != trimws(tcol))) {
+        stop("Time column '", time, "' is text that is not a set of ISO dates ",
+             "(YYYY-MM-DD). Convert it to Date (or yearmon/yearqtr) first.", call. = FALSE)
+      }
+      tcol <- d
+    }
+    idx <- standard_index(tcol)
     vals <- df[setdiff(names(df), time)]
   }
 
